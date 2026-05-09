@@ -1,8 +1,6 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import * as db from "../db";
-import { storagePut } from "../storage";
-import { nanoid } from "nanoid";
 import { parseSalesReport } from "../parsers";
 import { parseQuickBooksExport } from "../quickbooks-parser";
 import { validateQuickBooks } from "../data-validation";
@@ -18,8 +16,6 @@ export const salesRouter = router({
     .input(z.object({ fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE), fileName: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
-      const fileKey = `sales/${nanoid()}-${input.fileName}`;
-      await storagePut(fileKey, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
       const uploadId = await db.createSalesUpload({
         uploadedBy: ctx.user?.id ?? null,
@@ -46,8 +42,6 @@ export const salesRouter = router({
     .input(z.object({ fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE), fileName: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
-      const fileKey = `sales/qb-${nanoid()}-${input.fileName}`;
-      await storagePut(fileKey, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
       const qbResult = await parseQuickBooksExport(buffer);
       const validation = validateQuickBooks(qbResult);

@@ -1,8 +1,6 @@
 import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import * as db from "../db";
-import { storagePut } from "../storage";
-import { nanoid } from "nanoid";
 import { parseInventoryReport, findBestSkuMatch } from "../parsers";
 import { parseMetrcExport } from "../metrc-parser";
 import { validateInventory, validateMetrc } from "../data-validation";
@@ -28,8 +26,6 @@ export const inventoryRouter = router({
     .input(z.object({ fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE), fileName: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
-      const fileKey = `inventory/${nanoid()}-${input.fileName}`;
-      await storagePut(fileKey, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
       const parsedItems = await parseInventoryReport(buffer);
       const allSkus = await db.getAllSkus();
@@ -73,8 +69,6 @@ export const inventoryRouter = router({
     .input(z.object({ fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE), fileName: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
-      const fileKey = `inventory/metrc-${nanoid()}-${input.fileName}`;
-      await storagePut(fileKey, buffer, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
 
       const result = await parseMetrcExport(buffer);
       const validation = validateMetrc(result);
