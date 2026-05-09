@@ -4,7 +4,6 @@ import react from "@vitejs/plugin-react";
 import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, type Plugin, type ViteDevServer } from "vite";
-import { vitePluginManusRuntime } from "vite-plugin-manus-runtime";
 
 // =============================================================================
 // Manus Debug Collector - Vite Plugin
@@ -182,74 +181,10 @@ function vitePluginAnalytics(): Plugin {
   };
 }
 
-function manualChunks(id: string): string | undefined {
-  if (!id.includes("node_modules")) {
-    return undefined;
-  }
-
-  if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/scheduler/")) {
-    return "react-vendor";
-  }
-
-  if (
-    id.includes("/@trpc/") ||
-    id.includes("/@tanstack/") ||
-    id.includes("/superjson/")
-  ) {
-    return "data-vendor";
-  }
-
-  if (id.includes("/recharts/")) {
-    return "charts-vendor";
-  }
-
-  if (
-    id.includes("/wouter/") ||
-    id.includes("/sonner/") ||
-    id.includes("/jose/")
-  ) {
-    return "app-shell-vendor";
-  }
-
-  if (
-    id.includes("/framer-motion/") ||
-    id.includes("/next-themes/") ||
-    id.includes("/react-day-picker/") ||
-    id.includes("/vaul/") ||
-    id.includes("/input-otp/") ||
-    id.includes("/streamdown/") ||
-    id.includes("/@floating-ui/") ||
-    id.includes("/@internationalized/") ||
-    id.includes("/use-sync-external-store/")
-  ) {
-    return "interaction-vendor";
-  }
-
-  if (
-    id.includes("/@radix-ui/") ||
-    id.includes("/lucide-react/") ||
-    id.includes("/class-variance-authority/") ||
-    id.includes("/clsx/") ||
-    id.includes("/tailwind-merge/") ||
-    id.includes("/cmdk/") ||
-    id.includes("/embla-carousel-react/") ||
-    id.includes("/react-hook-form/")
-  ) {
-    return "ui-vendor";
-  }
-
-  if (id.includes("/date-fns/")) {
-    return "date-vendor";
-  }
-
-  return "vendor";
-}
-
 const plugins = [
   react(),
   tailwindcss(),
   jsxLocPlugin(),
-  vitePluginManusRuntime(),
   vitePluginManusDebugCollector(),
   vitePluginAnalytics(),
 ];
@@ -270,12 +205,6 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 900,
-    rollupOptions: {
-      output: {
-        manualChunks,
-        onlyExplicitManualChunks: true,
-      },
-    },
   },
   server: {
     host: true,
