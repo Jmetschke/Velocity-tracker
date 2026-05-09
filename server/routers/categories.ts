@@ -21,7 +21,7 @@ export const categoriesRouter = router({
       const id = await db.createCategory({
         name: input.name,
         theoreticalBatchSize: input.theoreticalBatchSize,
-        lossPercent: String(input.lossPercent),
+        lossPercent: input.lossPercent,
         netBatchSize,
       });
       return { id };
@@ -42,7 +42,7 @@ export const categoriesRouter = router({
       if (input.theoreticalBatchSize !== undefined)
         updateData.theoreticalBatchSize = input.theoreticalBatchSize;
       if (input.lossPercent !== undefined)
-        updateData.lossPercent = String(input.lossPercent);
+        updateData.lossPercent = input.lossPercent;
 
       if (input.theoreticalBatchSize !== undefined || input.lossPercent !== undefined) {
         const current = await db.getCategoryById(input.id);

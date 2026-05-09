@@ -111,7 +111,7 @@ Configurable email alerts via Resend when SKUs approach stockout. Settings inclu
 
 ## Data Model
 
-The database schema is defined in `drizzle/schema.ts` and enforced with Drizzle ORM against a MySQL/TiDB instance.
+The database schema is defined in `drizzle/schema.ts` and enforced with Drizzle ORM against a Turso/libSQL database.
 
 | Table | Purpose |
 |---|---|
@@ -175,7 +175,7 @@ The LLM call is always made server-side. The API key is never exposed to the cli
 | Serialization | SuperJSON |
 | Backend framework | Express 4 |
 | Database ORM | Drizzle ORM |
-| Database | MySQL / TiDB |
+| Database | Turso / libSQL |
 | Excel parsing | ExcelJS 4 |
 | PDF generation | jsPDF 4 + jspdf-autotable 5 (lazy-loaded) |
 | Email | Resend |
@@ -258,7 +258,8 @@ All environment variables are injected by the platform. Do not commit `.env` fil
 
 | Variable | Purpose |
 |---|---|
-| `DATABASE_URL` | MySQL/TiDB connection string |
+| `TURSO_DATABASE_URL` | Turso/libSQL database URL (`libsql://...`) |
+| `TURSO_AUTH_TOKEN` | Turso database auth token |
 | `BUILT_IN_FORGE_API_URL` | Manus built-in API base URL (LLM, storage, etc.) |
 | `BUILT_IN_FORGE_API_KEY` | Server-side bearer token for Manus APIs |
 | `VITE_FRONTEND_FORGE_API_KEY` | Client-side bearer token for Manus APIs |
@@ -280,8 +281,9 @@ pnpm install
 # Copy environment variables (fill in values)
 cp .env.example .env
 
-# Apply database migrations
-pnpm db:push
+# Generate or apply database migrations
+pnpm db:generate
+pnpm db:migrate
 
 # Start the development server (frontend + backend on port 3000)
 pnpm dev
@@ -299,6 +301,8 @@ The development server runs both the Vite frontend (with HMR) and the Express ba
 | `pnpm check` | TypeScript type check (no emit) |
 | `pnpm test` | Run all Vitest tests |
 | `pnpm format` | Format with Prettier |
+| `pnpm db:generate` | Generate Drizzle migration SQL |
+| `pnpm db:migrate` | Apply Drizzle migrations to Turso/libSQL |
 
 ---
 
@@ -309,7 +313,7 @@ Schema changes follow a strict four-step process to keep the TypeScript schema a
 1. **Edit** `drizzle/schema.ts` with the new table or column definition.
 2. **Generate** the migration SQL: `pnpm drizzle-kit generate`
 3. **Review** the generated `.sql` file in `drizzle/`.
-4. **Apply** the migration via the platform's SQL execution tool (not `drizzle-kit migrate` directly in production).
+4. **Apply** the migration with `pnpm db:migrate`, or let the server apply committed migrations on startup.
 
 Never modify the generated `.sql` files manually. Never use `drizzle-kit push` in production — it bypasses the migration history.
 

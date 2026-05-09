@@ -85,11 +85,11 @@ export async function checkAndNotifyStockoutRisks(user: User): Promise<void> {
       userId: user.id,
       skuId: item.skuId,
       currentStock: item.totalQty ?? 0,
-      daysUntilStockout: (Math.round(daysUntilStockout * 100) / 100).toString(),
-      dailyVelocity: velocity.toString(),
+      daysUntilStockout: Math.round(daysUntilStockout * 100) / 100,
+      dailyVelocity: velocity,
       notificationType,
       emailSent: false,
-    } as any);
+    });
   }
 
   if (alerts.length > 0) {

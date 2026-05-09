@@ -1,5 +1,7 @@
 import { eq, desc, and, sql, gte, lte } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
+import { migrate } from "drizzle-orm/libsql/migrator";
 import {
   InsertUser,
   users,
@@ -27,17 +29,38 @@ import {
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _migrationsApplied = false;
 
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db && ENV.tursoDatabaseUrl) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const client = createClient({
+        url: ENV.tursoDatabaseUrl,
+        authToken: ENV.tursoAuthToken || undefined,
+      });
+      _db = drizzle(client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
     }
   }
   return _db;
+}
+
+export async function applyMigrations() {
+  if (_migrationsApplied) return;
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Database] TURSO_DATABASE_URL is not configured; skipping migrations");
+    return;
+  }
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  _migrationsApplied = true;
+}
+
+async function insertAndReturnId(insertQuery: any, idColumn: any) {
+  const rows = await insertQuery.returning({ id: idColumn });
+  return rows[0]?.id;
 }
 
 // ─── Users ───────────────────────────────────────────────────────────
@@ -63,7 +86,10 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     else if (user.openId === ENV.ownerOpenId) { values.role = "admin"; updateSet.role = "admin"; }
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-    await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
+      set: updateSet,
+    });
   } catch (error) { console.error("[Database] Failed to upsert user:", error); throw error; }
 }
 
@@ -84,8 +110,7 @@ export async function getAllCategories() {
 export async function createCategory(data: InsertSkuCategory) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(skuCategories).values(data);
-  return result[0].insertId;
+  return insertAndReturnId(db.insert(skuCategories).values(data), skuCategories.id);
 }
 
 export async function getCategoryById(id: number) {
@@ -143,8 +168,7 @@ export async function getSkuById(id: number) {
 export async function createSku(data: InsertSku) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(skus).values(data);
-  return result[0].insertId;
+  return insertAndReturnId(db.insert(skus).values(data), skus.id);
 }
 
 export async function updateSku(id: number, data: Partial<InsertSku>) {
@@ -172,13 +196,13 @@ export async function updateSkuVelocity(
   const buffer = bufferDays ?? sku.bufferDays ?? 14;
   const parLevel = Math.ceil(velocity * buffer);
   await db.update(skus).set({
-    dailyVelocity: String(velocity),
+    dailyVelocity: velocity,
     velocitySource: source,
     parLevel,
   }).where(eq(skus.id, id));
   await db.insert(velocityHistory).values({
     skuId: id,
-    dailyVelocity: String(velocity),
+    dailyVelocity: velocity,
     source,
   });
 }
@@ -187,8 +211,7 @@ export async function updateSkuVelocity(
 export async function createInventorySnapshot(data: InsertInventorySnapshot) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(inventorySnapshots).values(data);
-  return result[0].insertId;
+  return insertAndReturnId(db.insert(inventorySnapshots).values(data), inventorySnapshots.id);
 }
 
 export async function createInventoryItems(items: InsertInventoryItem[]) {
@@ -246,8 +269,7 @@ export async function getAllSnapshots() {
 export async function createSalesUpload(data: InsertSalesUpload) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(salesUploads).values(data);
-  return result[0].insertId;
+  return insertAndReturnId(db.insert(salesUploads).values(data), salesUploads.id);
 }
 
 export async function updateSalesUpload(id: number, data: Partial<InsertSalesUpload>) {
@@ -295,8 +317,7 @@ export async function getAllVelocityHistory() {
 export async function createProductionBatch(data: InsertProductionBatch) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(productionBatches).values(data);
-  return result[0].insertId;
+  return insertAndReturnId(db.insert(productionBatches).values(data), productionBatches.id);
 }
 
 export async function updateProductionBatch(id: number, data: Partial<InsertProductionBatch>) {
@@ -337,8 +358,7 @@ export async function deleteProductionBatch(id: number) {
 export async function createCommittedBatch(data: InsertCommittedBatch) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(committedBatches).values(data);
-  return result[0].insertId;
+  return insertAndReturnId(db.insert(committedBatches).values(data), committedBatches.id);
 }
 
 export async function getAllCommittedBatches() {
@@ -424,8 +444,7 @@ export async function createOrUpdateNotificationSettings(data: InsertNotificatio
 export async function createNotificationHistory(data: InsertNotificationHistory) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(notificationHistory).values(data);
-  return result[0].insertId;
+  return insertAndReturnId(db.insert(notificationHistory).values(data), notificationHistory.id);
 }
 
 export async function getNotificationHistory(userId: number, limit: number = 50) {

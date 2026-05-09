@@ -23,7 +23,7 @@ export const skusRouter = router({
       const id = await db.createSku({
         name: input.name,
         categoryId: input.categoryId,
-        dailyVelocity: String(input.dailyVelocity),
+        dailyVelocity: input.dailyVelocity,
         velocitySource: "manual",
         parLevel,
         bufferDays: input.bufferDays,
