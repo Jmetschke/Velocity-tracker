@@ -52,7 +52,7 @@ Server (Express 4 + tRPC 11)
     └── drizzle/schema.ts        Single source of truth for the data model
 ```
 
-Authentication is handled via Manus OAuth. A site-level password gate (`SITE_PASSWORD`) provides an additional layer of access control before OAuth. All timestamps are stored as UTC in the database and converted to local time in the browser.
+The app runs as an open single-workspace tool without login or authorization. All timestamps are stored as UTC in the database and converted to local time in the browser.
 
 ---
 
@@ -115,7 +115,7 @@ The database schema is defined in `drizzle/schema.ts` and enforced with Drizzle 
 
 | Table | Purpose |
 |---|---|
-| `users` | OAuth user accounts with role (`user` \| `admin`) |
+| `users` | Legacy user table retained for upload and notification ownership references |
 | `sku_categories` | Product categories with batch size and loss % |
 | `skus` | Individual SKUs with velocity, par, buffer, and lead time |
 | `inventory_snapshots` | Metadata for each inventory file upload |
@@ -180,7 +180,7 @@ The LLM call is always made server-side. The API key is never exposed to the cli
 | PDF generation | jsPDF 4 + jspdf-autotable 5 (lazy-loaded) |
 | Email | Resend |
 | File storage | AWS S3 |
-| Authentication | Manus OAuth (JWT session cookies) |
+| Authentication | None; open single-workspace app |
 | Validation | Zod 4 |
 | Build tool | Vite 7 |
 | Runtime | Node.js (tsx in dev, esbuild in prod) |
@@ -259,18 +259,11 @@ All environment variables are injected by the platform. Do not commit `.env` fil
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | MySQL/TiDB connection string |
-| `JWT_SECRET` | Session cookie signing secret |
-| `VITE_APP_ID` | Manus OAuth application ID |
-| `OAUTH_SERVER_URL` | Manus OAuth backend base URL |
-| `VITE_OAUTH_PORTAL_URL` | Manus login portal URL (frontend) |
-| `OWNER_OPEN_ID` | Owner's OAuth ID for admin seeding |
-| `OWNER_NAME` | Owner's display name |
 | `BUILT_IN_FORGE_API_URL` | Manus built-in API base URL (LLM, storage, etc.) |
 | `BUILT_IN_FORGE_API_KEY` | Server-side bearer token for Manus APIs |
 | `VITE_FRONTEND_FORGE_API_KEY` | Client-side bearer token for Manus APIs |
 | `VITE_FRONTEND_FORGE_API_URL` | Client-side Manus API base URL |
 | `RESEND_API_KEY` | Resend email service API key |
-| `SITE_PASSWORD` | Site-level password gate (pre-OAuth) |
 
 ---
 
@@ -344,12 +337,12 @@ pnpm test --watch   # Watch mode
 | `velocity-ai.test.ts` | AI velocity analysis and Zod validation |
 | `data-validation.test.ts` | Upload data validation rules |
 | `notifications.test.ts` | Stockout notification logic |
-| `site-gate.test.ts` | Site password middleware |
+| `site-gate.test.ts` | Legacy site password middleware |
 | `coverage-gaps.test.ts` | Edge cases for scheduling and parsers |
 | `edge-cases.test.ts` | Boundary conditions across all modules |
 | `audit-remediation.test.ts` | Security and validation fixes (file size limits, Zod) |
 | `page-error-boundary.test.ts` | React error boundary behavior |
-| `auth.logout.test.ts` | Auth logout flow |
+| `auth.logout.test.ts` | Auth compatibility logout flow |
 | `resend.test.ts` | Email service integration |
 
 All test fixtures for Excel parsing are built programmatically using ExcelJS — no binary fixture files are committed to the repository.
@@ -363,7 +356,7 @@ All test fixtures for Excel parsing are built programmatically using ExcelJS —
 - **LLM responses are Zod-validated** before any database writes. A malformed LLM response throws a `ZodError` and aborts the operation cleanly.
 - **No raw SQL:** All database queries use Drizzle ORM's query builder. There are no template literal SQL strings.
 - **Server-side LLM calls only:** The LLM API key is never exposed to the client. All AI calls are made inside tRPC procedures.
-- **JWT session cookies** are `httpOnly`, `sameSite: lax`, and signed with `JWT_SECRET`.
+- The deployed app does not require login, OAuth, a site password, or session cookies.
 - **Foreign key constraints** are enforced at the database level on all relational columns.
 - **LLM telemetry** logs every AI call with token estimates, duration, and success/failure for future cost monitoring and tier-based access control.
 

@@ -7,8 +7,6 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import PageErrorBoundary from "./components/PageErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
-import SiteGate from "./components/SiteGate";
-import { useSiteGate } from "./hooks/useSiteGate";
 import { Loader2 } from "lucide-react";
 
 // ─── Eager: Home is the landing page, always needed immediately ─────
@@ -62,31 +60,13 @@ function Router() {
   );
 }
 
-function AppWithGate() {
-  const { loading, gated, authenticated, error, verify } = useSiteGate();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      </div>
-    );
-  }
-
-  if (gated && !authenticated) {
-    return <SiteGate error={error} onSubmit={verify} />;
-  }
-
-  return <Router />;
-}
-
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
-          <AppWithGate />
+          <Router />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
