@@ -31,7 +31,7 @@ function daysInMonthLabel(month: string) {
 
 function selectAnalysisMonths(result: QBParseResult) {
   const fullMonths = result.months.filter((month) => !result.partialMonths.includes(month));
-  return fullMonths.slice(-3);
+  return fullMonths.slice(-6);
 }
 
 export async function calculateQuickBooksVelocity(

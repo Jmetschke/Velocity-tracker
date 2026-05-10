@@ -117,7 +117,7 @@ Your job is to analyze historical sales data and calculate the daily wholesale v
 The company's current SKUs are: ${skuNames}
 
 Rules:
-- Calculate daily velocity based on the most recent 3 full months of data
+- Calculate daily velocity based on the most recent 6 full months of data
 - Use calendar days (not business days) for velocity calculation
 - Return results as JSON with the exact SKU names matching the list above
 - If a SKU has no sales data, set velocity to 0
@@ -131,7 +131,7 @@ Return a JSON object with this exact structure:
   "summary": "brief overall analysis"
 }`;
 
-  const userMessage = `Here is the pre-processed sales data from "${fileName}". Each row shows the SKU name followed by monthly quantities:\n\n${csvForAI}\n\nPlease analyze this data and calculate the daily wholesale velocity for each SKU. Focus on the most recent 3 full months of quantity data. Use calendar days per month (Jan=31, Feb=28, Mar=31, Apr=30, May=31, Jun=30, Jul=31, Aug=31, Sep=30, Oct=31, Nov=30, Dec=31) when calculating daily rates.${userHint ? `\n\n${userHint}` : ""}`;
+  const userMessage = `Here is the pre-processed sales data from "${fileName}". Each row shows the SKU name followed by monthly quantities:\n\n${csvForAI}\n\nPlease analyze this data and calculate the daily wholesale velocity for each SKU. Focus on the most recent 6 full months of quantity data. Use calendar days per month (Jan=31, Feb=28, Mar=31, Apr=30, May=31, Jun=30, Jul=31, Aug=31, Sep=30, Oct=31, Nov=30, Dec=31) when calculating daily rates.${userHint ? `\n\n${userHint}` : ""}`;
 
   const promptChars = systemPrompt.length + userMessage.length;
   const promptTokensEst = Math.ceil(promptChars / 4);
