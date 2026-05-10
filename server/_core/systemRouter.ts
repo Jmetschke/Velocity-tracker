@@ -11,6 +11,10 @@ export const systemRouter = router({
     )
     .query(() => ({
       ok: true,
+      appVersion: "metrc-sku-matching-83b5b4f",
+      renderGitCommit: process.env.RENDER_GIT_COMMIT ?? null,
+      tursoDatabaseUrlConfigured: Boolean(process.env.TURSO_DATABASE_URL),
+      tursoAuthTokenConfigured: Boolean(process.env.TURSO_AUTH_TOKEN),
     })),
 
   notifyOwner: adminProcedure
