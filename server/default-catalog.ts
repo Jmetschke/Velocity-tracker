@@ -56,10 +56,7 @@ function normalizeCatalogName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-export async function seedDefaultCatalog() {
-  const connection = await db.getDb();
-  if (!connection) return;
-
+async function ensureDefaultCategories() {
   const existingCategories = await db.getAllCategories();
   const categoriesByName = new Map(
     existingCategories.map((category) => [
@@ -85,12 +82,27 @@ export async function seedDefaultCatalog() {
     if (id) categoriesByName.set(normalized, id);
   }
 
+  return categoriesByName;
+}
+
+export async function ensureDefaultSkus(skuNames: string[]) {
+  const connection = await db.getDb();
+  if (!connection) return;
+
+  const requested = new Set(skuNames.map(normalizeCatalogName));
+  const seedSkus = DEFAULT_SKUS.filter((sku) =>
+    requested.has(normalizeCatalogName(sku.name))
+  );
+  if (seedSkus.length === 0) return;
+
+  const categoriesByName = await ensureDefaultCategories();
+
   const existingSkus = await db.getAllSkus();
   const skusByName = new Map(
     existingSkus.map((sku) => [normalizeCatalogName(sku.name), sku])
   );
 
-  for (const sku of DEFAULT_SKUS) {
+  for (const sku of seedSkus) {
     const normalized = normalizeCatalogName(sku.name);
     const existing = skusByName.get(normalized);
     const categoryId = categoriesByName.get(normalizeCatalogName(sku.category));
@@ -115,4 +127,8 @@ export async function seedDefaultCatalog() {
       isActive: true,
     });
   }
+}
+
+export async function seedDefaultCatalog() {
+  await ensureDefaultSkus(DEFAULT_SKUS.map((sku) => sku.name));
 }

@@ -4,7 +4,7 @@ import * as db from "../db";
 import { parseInventoryReport, findBestSkuMatch } from "../parsers";
 import { parseMetrcExport } from "../metrc-parser";
 import { validateInventory, validateMetrc } from "../data-validation";
-import { seedDefaultCatalog } from "../default-catalog";
+import { ensureDefaultSkus, seedDefaultCatalog } from "../default-catalog";
 
 const MAX_FILE = 10_000_000;
 const FILE_TOO_LARGE = "File too large (max ~7.5 MB)";
@@ -83,8 +83,8 @@ export const inventoryRouter = router({
         };
       }
 
-      await seedDefaultCatalog();
-      const allSkus = await db.getAllSkus();
+      await ensureDefaultSkus(result.items.map((item) => item.skuName));
+      let allSkus = await db.getAllSkus();
       const snapshotId = await db.createInventorySnapshot({
         uploadedBy: ctx.user?.id ?? null,
         fileName: `[METRC] ${input.fileName}`,
@@ -105,6 +105,23 @@ export const inventoryRouter = router({
           });
         } else {
           unmatchedNames.push(parsed.skuName);
+        }
+      }
+
+      if (unmatchedNames.length > 0) {
+        await ensureDefaultSkus(unmatchedNames);
+        allSkus = await db.getAllSkus();
+        for (let i = unmatchedNames.length - 1; i >= 0; i--) {
+          const parsed = result.items.find((item) => item.skuName === unmatchedNames[i]);
+          const match = parsed ? findBestSkuMatch(parsed.skuName, allSkus) : null;
+          if (!parsed || !match) continue;
+          items.push({
+            skuId: match.id,
+            qtyInInventory: parsed.available,
+            qtyOnHold: parsed.wip,
+            totalQty: parsed.available + parsed.wip,
+          });
+          unmatchedNames.splice(i, 1);
         }
       }
 

@@ -124,6 +124,23 @@ describe("METRC Parser (synthetic data)", () => {
     expect(nameMap.get("Snackbar Vape - Watermelon Lychee 1g")).toBe(400);
   });
 
+  it("maps the current 2g Snackbar and sampler METRC item names", async () => {
+    const buffer = await buildMetrcBuffer([
+      row({ Tag: "T1", Item: "Snackbar Vape Pen 2g - Strawberry Dragonfruit", Quantity: 174 }),
+      row({ Tag: "T2", Item: "Snackbar Vape Pen 2g - Peach Passion Fruit", Quantity: 242 }),
+      row({ Tag: "T3", Item: "Snackbar Vape Pen 2g - Cherry Pomegranate Lemon", Quantity: 266 }),
+      row({ Tag: "T4", Item: "Hijnx Edible: Sampler Medley Bag", Quantity: 11198 }),
+    ]);
+    const result = await parseMetrcExport(buffer);
+    const nameMap = new Map(result.items.map((i) => [i.skuName, i.available]));
+
+    expect(result.unmatchedRows).toHaveLength(0);
+    expect(nameMap.get("Snackbar Vape - Strawberry Dragonfruit 2g")).toBe(174);
+    expect(nameMap.get("Snackbar Vape - Peach Passion Fruit 2g")).toBe(242);
+    expect(nameMap.get("Snackbar Vape - Cherry Pomegranate Lemon 2g")).toBe(266);
+    expect(nameMap.get("Hijnx Sampler Medley Bag")).toBe(11198);
+  });
+
   it("maps Shooter SKUs correctly", async () => {
     const buffer = await buildMetrcBuffer([
       row({ Tag: "T1", Item: "Hijnx Beverage: Triple Citrus RSO Shooter - 2oz", Quantity: 50 }),
