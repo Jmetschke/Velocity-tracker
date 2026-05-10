@@ -49,6 +49,7 @@ const METRC_TO_SKU: Record<string, string> = {
   "hijnx beverage: triple citrus rso shooter - 2oz": "Hijnx Shooter - Triple Citrus 2oz",
   "hijnx beverage: watermelon rso shooter - 2oz": "Hijnx Shooter - Watermelon 2oz",
   "hijnx beverage: blue razz rso shooter - 2oz": "Hijnx Shooter - Sour Blue Razz 2oz",
+  "hijnx edible: sampler medley bag": "Hijnx Sampler Medley Bag",
 };
 
 const BATCH_KEYWORD_MAP: Record<string, string> = {
@@ -86,11 +87,12 @@ function matchItemToSku(itemName: string, batchName: string, sourceJob: string):
   const directMatch = METRC_TO_SKU[itemLower];
   if (directMatch) return directMatch;
 
-  const vapeMatch = itemLower.match(/snackbar vape pen 1g\s*-\s*(.+)/);
+  const vapeMatch = itemLower.match(/snackbar vape pen (1g|2g)\s*-\s*(.+)/);
   if (vapeMatch) {
-    const flavor = vapeMatch[1].trim();
+    const size = vapeMatch[1];
+    const flavor = vapeMatch[2].trim();
     const formatted = flavor.replace(/\b\w/g, (c) => c.toUpperCase());
-    return `Snackbar Vape - ${formatted} 1g`;
+    return `Snackbar Vape - ${formatted} ${size}`;
   }
 
   const batchLower = `${batchName} ${sourceJob}`.toLowerCase();
