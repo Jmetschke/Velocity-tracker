@@ -85,9 +85,96 @@ async function buildCustomQBWorkbook(opts: {
   return Buffer.from(await wb.xlsx.writeBuffer());
 }
 
+async function buildQBDetailWorkbook(): Promise<Buffer> {
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Sheet1");
+  ws.getCell(1, 1).value = "Elevated Organics, LLC";
+  ws.getCell(2, 1).value = "Sales by Product/Service Detail";
+  ws.getCell(3, 1).value = "January 1-May 10, 2026";
+  const headers = [
+    "", "Transaction date", "Transaction type", "Num", "Customer full name",
+    "Description", "Quantity", "Sales price", "Amount", "Balance",
+  ];
+  headers.forEach((h, i) => { ws.getCell(5, i + 1).value = h; });
+
+  let row = 6;
+  function product(name: string) {
+    ws.getCell(row++, 1).value = name;
+  }
+  function sale(date: string, qty: number, amount = qty * 5) {
+    ws.getCell(row, 2).value = date;
+    ws.getCell(row, 3).value = "Invoice";
+    ws.getCell(row, 5).value = "Dispensary";
+    ws.getCell(row, 6).value = "Product sale";
+    ws.getCell(row, 7).value = qty;
+    ws.getCell(row, 8).value = amount / qty;
+    ws.getCell(row, 9).value = amount;
+    row++;
+  }
+  function total(name: string) {
+    ws.getCell(row++, 1).value = `Total for ${name}`;
+  }
+
+  product("OG alpha - 2pk");
+  sale("01/06/2026", 20);
+  sale("02/10/2026", 30);
+  sale("05/08/2026", 40);
+  total("OG alpha - 2pk");
+
+  product("Blue Razz Shooter");
+  sale("04/10/2026", 15);
+  total("Blue Razz Shooter");
+
+  product("Magic Mango 1g Vape");
+  sale("03/05/2026", 12);
+  total("Magic Mango 1g Vape");
+
+  product("1L Distillate for 1g Vapes");
+  sale("03/19/2026", 11, 66000);
+  total("1L Distillate for 1g Vapes");
+
+  product("OG alpha 1pk (SAMPLE)");
+  sale("03/20/2026", 99, 0.99);
+  total("OG alpha 1pk (SAMPLE)");
+
+  return Buffer.from(await wb.xlsx.writeBuffer());
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────
 
 describe("QuickBooks Parser", () => {
+  describe("Sales by Product/Service Detail", () => {
+    it("aggregates transaction rows by SKU and month", async () => {
+      const result = await parseQuickBooksExport(await buildQBDetailWorkbook());
+      const alpha = result.items.find((i) => i.skuName === "Alpha Chunk - 2pk");
+      const shooter = result.items.find((i) => i.skuName === "Hijnx Shooter - Sour Blue Razz 2oz");
+      const vape = result.items.find((i) => i.skuName === "Snackbar Vape - Mango Magic 1g");
+
+      expect(result.months).toEqual(["Jan 2026", "Feb 2026", "Mar 2026", "Apr 2026", "May 1-10 2026"]);
+      expect(result.partialMonths).toEqual(["May 1-10 2026"]);
+      expect(result.unmatchedRows).toHaveLength(0);
+      expect(alpha?.totalQuantity).toBe(90);
+      expect(alpha?.monthlyData.map((m) => [m.month, m.quantity])).toEqual([
+        ["Jan 2026", 20],
+        ["Feb 2026", 30],
+        ["May 1-10 2026", 40],
+      ]);
+      expect(shooter?.totalQuantity).toBe(15);
+      expect(vape?.totalQuantity).toBe(12);
+    });
+
+    it("excludes samples and non-finished-goods rows from detail reports", async () => {
+      const result = await parseQuickBooksExport(await buildQBDetailWorkbook());
+      const names = [
+        ...result.items.map((i) => i.qbName.toLowerCase()),
+        ...result.unmatchedRows.map((row) => row.name.toLowerCase()),
+      ];
+
+      expect(names.some((name) => name.includes("sample"))).toBe(false);
+      expect(names.some((name) => name.includes("distillate"))).toBe(false);
+    });
+  });
+
   describe("SKU Mapping", () => {
     it("maps all Hijnx Edible products to correct SKUs", async () => {
       const buf = await buildQBWorkbook({
@@ -119,7 +206,7 @@ describe("QuickBooks Parser", () => {
       const result = await parseQuickBooksExport(buf);
       expect(result.items.map(i => i.skuName).sort()).toEqual([
         "Snackbar Vape - Grape Crush 1g", "Snackbar Vape - Lemon Yuzu 1g",
-        "Snackbar Vape - Magic Mango 1g", "Snackbar Vape - Watermelon Lychee 1g",
+        "Snackbar Vape - Mango Magic 1g", "Snackbar Vape - Watermelon Lychee 1g",
       ]);
     });
 
@@ -422,7 +509,7 @@ describe("QuickBooks Parser", () => {
       const result = await parseQuickBooksExport(buf);
       const skuNames = result.items.map(i => i.skuName);
       for (const s of ["Snackbar Vape - Grape Crush 1g","Snackbar Vape - Lemon Yuzu 1g",
-        "Snackbar Vape - Magic Mango 1g","Snackbar Vape - Watermelon Lychee 1g"])
+        "Snackbar Vape - Mango Magic 1g","Snackbar Vape - Watermelon Lychee 1g"])
         expect(skuNames).toContain(s);
     });
 

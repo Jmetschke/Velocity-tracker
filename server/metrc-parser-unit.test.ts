@@ -120,7 +120,7 @@ describe("METRC Parser (synthetic data)", () => {
 
     expect(nameMap.get("Snackbar Vape - Grape Crush 1g")).toBe(100);
     expect(nameMap.get("Snackbar Vape - Lemon Yuzu 1g")).toBe(200);
-    expect(nameMap.get("Snackbar Vape - Magic Mango 1g")).toBe(300);
+    expect(nameMap.get("Snackbar Vape - Mango Magic 1g")).toBe(300);
     expect(nameMap.get("Snackbar Vape - Watermelon Lychee 1g")).toBe(400);
   });
 

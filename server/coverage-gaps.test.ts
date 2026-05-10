@@ -305,7 +305,7 @@ describe("METRC vape pattern edge cases", () => {
       vapeRow({ Item: "Snackbar Vape Pen 1g- Magic Mango" }),
     ]);
     const result = await parseMetrcExport(buf);
-    expect(result.items[0].skuName).toBe("Snackbar Vape - Magic Mango 1g");
+    expect(result.items[0].skuName).toBe("Snackbar Vape - Mango Magic 1g");
   });
 });
 

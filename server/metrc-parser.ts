@@ -99,6 +99,9 @@ function matchItemToSku(itemName: string, batchName: string, sourceJob: string):
     const size = vapeMatch[1];
     const flavor = vapeMatch[2].trim();
     const formatted = flavor.replace(/\b\w/g, (c) => c.toUpperCase());
+    if (formatted === "Magic Mango") {
+      return `Snackbar Vape - Mango Magic ${size}`;
+    }
     return `Snackbar Vape - ${formatted} ${size}`;
   }
 
