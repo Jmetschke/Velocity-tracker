@@ -396,39 +396,52 @@ export default function Home() {
             <>
               {/* Desktop table — hidden on mobile */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="min-w-[1320px] w-full table-fixed text-sm">
+                  <colgroup>
+                    <col className="w-[104px]" />
+                    <col className="w-[330px]" />
+                    <col className="w-[92px]" />
+                    <col className="w-[96px]" />
+                    <col className="w-[96px]" />
+                    <col className="w-[92px]" />
+                    <col className="w-[106px]" />
+                    <col className="w-[136px]" />
+                    <col className="w-[106px]" />
+                    <col className="w-[112px]" />
+                    <col className="w-[150px]" />
+                  </colgroup>
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="pb-3 font-medium text-muted-foreground">Status</th>
-                      <th className="pb-3 font-medium text-muted-foreground">SKU</th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">Available</th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">In Testing</th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">Projected</th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">Par Level</th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">Velocity/Day</th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">
+                      <th className="px-3 pb-3 font-medium text-muted-foreground">Status</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground">SKU</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">Available</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">In<br />Testing</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">Projected</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">Par<br />Level</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">Velocity<br />/ Day</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">
                         <span className="flex items-center justify-end gap-1">
-                          <Timer className="h-3.5 w-3.5" />Days to Stockout
+                          <Timer className="h-3.5 w-3.5 shrink-0" />Days to<br />Stockout
                         </span>
                       </th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">Committed</th>
-                      <th className="pb-3 font-medium text-muted-foreground text-right">Batches Needed</th>
-                      <th className="pb-3 font-medium text-muted-foreground">Suggested Start</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">Committed</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground text-right leading-tight">Batches<br />Needed</th>
+                      <th className="px-3 pb-3 font-medium text-muted-foreground leading-tight">Suggested<br />Start</th>
                     </tr>
                   </thead>
                   <tbody>
                     {suggestions.suggestions.map((s) => (
                       <tr key={s.skuId} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="py-3"><UrgencyBadge urgency={s.urgency} /></td>
-                        <td className="py-3 font-medium text-foreground">{s.skuName}</td>
-                        <td className="py-3 text-right tabular-nums">{s.currentStock.toLocaleString()}</td>
-                        <td className="py-3 text-right tabular-nums text-muted-foreground">
+                        <td className="px-3 py-3"><UrgencyBadge urgency={s.urgency} /></td>
+                        <td className="px-3 py-3 font-medium text-foreground whitespace-nowrap">{s.skuName}</td>
+                        <td className="px-3 py-3 text-right tabular-nums">{s.currentStock.toLocaleString()}</td>
+                        <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">
                           {s.wipStock > 0 ? s.wipStock.toLocaleString() : "--"}
                         </td>
-                        <td className="py-3 text-right tabular-nums font-medium">{s.projectedStock.toLocaleString()}</td>
-                        <td className="py-3 text-right tabular-nums">{s.parLevel.toLocaleString()}</td>
-                        <td className="py-3 text-right tabular-nums">{s.dailyVelocity.toFixed(1)}</td>
-                        <td className="py-3 text-right">
+                        <td className="px-3 py-3 text-right tabular-nums font-medium">{s.projectedStock.toLocaleString()}</td>
+                        <td className="px-3 py-3 text-right tabular-nums">{s.parLevel.toLocaleString()}</td>
+                        <td className="px-3 py-3 text-right tabular-nums">{s.dailyVelocity.toFixed(1)}</td>
+                        <td className="px-3 py-3 text-right">
                           {s.daysUntilStockout === Infinity ? (
                             <span className="text-muted-foreground">--</span>
                           ) : (
@@ -455,15 +468,15 @@ export default function Home() {
                             </Tooltip>
                           )}
                         </td>
-                        <td className="py-3 text-right tabular-nums">
+                        <td className="px-3 py-3 text-right tabular-nums">
                           {s.committedQuantity > 0 ? (
                             <span className="text-blue-600 font-medium">{s.committedQuantity.toLocaleString()}</span>
                           ) : (
                             <span className="text-muted-foreground">--</span>
                           )}
                         </td>
-                        <td className="py-3 text-right tabular-nums font-medium">{s.batchesNeeded || "--"}</td>
-                        <td className="py-3 text-muted-foreground">
+                        <td className="px-3 py-3 text-right tabular-nums font-medium">{s.batchesNeeded || "--"}</td>
+                        <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">
                           {s.batchesNeeded > 0 ? (
                             <span>
                               {format(new Date(s.suggestedStartDate), "MMM d")}
