@@ -4,6 +4,7 @@ import * as db from "../db";
 import { parseInventoryReport, findBestSkuMatch } from "../parsers";
 import { parseMetrcExport } from "../metrc-parser";
 import { validateInventory, validateMetrc } from "../data-validation";
+import { seedDefaultCatalog } from "../default-catalog";
 
 const MAX_FILE = 10_000_000;
 const FILE_TOO_LARGE = "File too large (max ~7.5 MB)";
@@ -28,6 +29,7 @@ export const inventoryRouter = router({
       const buffer = Buffer.from(input.fileBase64, "base64");
 
       const parsedItems = await parseInventoryReport(buffer);
+      await seedDefaultCatalog();
       const allSkus = await db.getAllSkus();
 
       const validation = validateInventory(parsedItems, allSkus);
@@ -81,6 +83,7 @@ export const inventoryRouter = router({
         };
       }
 
+      await seedDefaultCatalog();
       const allSkus = await db.getAllSkus();
       const snapshotId = await db.createInventorySnapshot({
         uploadedBy: ctx.user?.id ?? null,
