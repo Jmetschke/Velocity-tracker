@@ -44,4 +44,35 @@ describe("calculateQuickBooksVelocity", () => {
     expect(analysis.summary).toContain("Jan 2026");
     expect(analysis.summary).not.toContain("Jul 1-10 2026");
   });
+
+  it("starts a SKU's denominator at its first full month with sales", async () => {
+    const result: QBParseResult = {
+      items: [{
+        qbName: "Peach Passionfruit 2g Vape",
+        skuName: "Snackbar Vape - Peach Passion Fruit 2g",
+        monthlyData: [
+          { month: "Apr 2026", quantity: 600, amount: 0, avgPrice: 0, cogs: 0, grossMargin: 0 },
+          { month: "May 1-10 2026", quantity: 250, amount: 0, avgPrice: 0, cogs: 0, grossMargin: 0 },
+        ],
+        totalQuantity: 850,
+        totalAmount: 0,
+      }],
+      unmatchedRows: [],
+      excludedRows: [],
+      months: ["Jan 2026", "Feb 2026", "Mar 2026", "Apr 2026", "May 1-10 2026"],
+      partialMonths: ["May 1-10 2026"],
+      totalRows: 2,
+      csvForAI: "",
+    };
+
+    const analysis = await calculateQuickBooksVelocity(result, [{ id: 1, name: "Snackbar Vape - Peach Passion Fruit 2g" }]);
+
+    expect(analysis.velocities[0]).toMatchObject({
+      skuName: "Snackbar Vape - Peach Passion Fruit 2g",
+      monthsAnalyzed: 1,
+      totalUnits: 600,
+      dailyVelocity: 20,
+    });
+    expect(analysis.velocities[0].notes).toBe("Calculated from Apr 2026.");
+  });
 });

@@ -34,26 +34,40 @@ function selectAnalysisMonths(result: QBParseResult) {
   return fullMonths.slice(-6);
 }
 
+function selectItemAnalysisMonths(
+  itemMonths: Array<{ month: string; quantity: number }>,
+  analysisMonths: string[],
+) {
+  const firstMonthWithSales = analysisMonths.findIndex((month) => {
+    const data = itemMonths.find((itemMonth) => itemMonth.month === month);
+    return data ? data.quantity > 0 : false;
+  });
+
+  if (firstMonthWithSales === -1) return analysisMonths;
+  return analysisMonths.slice(firstMonthWithSales);
+}
+
 export async function calculateQuickBooksVelocity(
   result: QBParseResult,
   allSkus: Awaited<ReturnType<typeof db.getAllSkus>>,
 ): Promise<VelocityAnalysis> {
   const analysisMonths = selectAnalysisMonths(result);
-  const analysisDays = analysisMonths.reduce((sum, month) => sum + daysInMonthLabel(month), 0);
 
   const velocities = result.items.map((item) => {
+    const itemAnalysisMonths = selectItemAnalysisMonths(item.monthlyData, analysisMonths);
+    const analysisDays = itemAnalysisMonths.reduce((sum, month) => sum + daysInMonthLabel(month), 0);
     const totalUnits = item.monthlyData
-      .filter((month) => analysisMonths.includes(month.month))
+      .filter((month) => itemAnalysisMonths.includes(month.month))
       .reduce((sum, month) => sum + month.quantity, 0);
     const dailyVelocity = analysisDays > 0 ? Number((totalUnits / analysisDays).toFixed(2)) : 0;
     return {
       skuName: item.skuName,
       dailyVelocity,
-      monthsAnalyzed: analysisMonths.length,
+      monthsAnalyzed: itemAnalysisMonths.length,
       totalUnits,
       notes:
-        analysisMonths.length > 0
-          ? `Calculated from ${analysisMonths.join(", ")}.`
+        itemAnalysisMonths.length > 0
+          ? `Calculated from ${itemAnalysisMonths.join(", ")}.`
           : "No full months available in QuickBooks report.",
     };
   });
