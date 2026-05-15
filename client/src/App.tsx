@@ -19,6 +19,7 @@ const VelocityPar = lazy(() => import("./pages/VelocityPar"));
 const ProductionCalendar = lazy(() => import("./pages/ProductionCalendar"));
 const Categories = lazy(() => import("./pages/Categories"));
 const CommittedBatches = lazy(() => import("./pages/CommittedBatches"));
+const ProductLaunchRoadmap = lazy(() => import("./pages/ProductLaunchRoadmap"));
 
 // ─── Suspense fallback ──────────────────────────────────────────────
 function PageLoader() {
@@ -53,6 +54,7 @@ function Router() {
         <Route path="/calendar" component={guarded(ProductionCalendar, "Production Calendar")} />
         <Route path="/categories" component={guarded(Categories, "Categories")} />
         <Route path="/committed" component={guarded(CommittedBatches, "Committed Batches")} />
+        <Route path="/product-launch-roadmap" component={guarded(ProductLaunchRoadmap, "Product Launch Roadmap")} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>

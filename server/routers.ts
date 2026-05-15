@@ -9,6 +9,7 @@ import {
   committedRouter,
   productionRouter,
   notificationsRouter,
+  productLaunchesRouter,
 } from "./routers/index";
 
 export const appRouter = router({
@@ -28,6 +29,7 @@ export const appRouter = router({
   committed: committedRouter,
   production: productionRouter,
   notifications: notificationsRouter,
+  productLaunches: productLaunchesRouter,
 });
 
 export type AppRouter = typeof appRouter;

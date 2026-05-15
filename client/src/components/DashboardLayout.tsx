@@ -23,6 +23,7 @@ import {
   TrendingUp,
   Settings,
   ClipboardList,
+  Rocket,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -33,6 +34,7 @@ const menuItems = [
   { icon: Package, label: "SKU Management", path: "/skus" },
   { icon: Upload, label: "Upload Data", path: "/upload" },
   { icon: TrendingUp, label: "Velocity & Par", path: "/velocity" },
+  { icon: Rocket, label: "Product Launch", path: "/product-launch-roadmap" },
   { icon: ClipboardList, label: "Committed Batches", path: "/committed" },
   { icon: CalendarDays, label: "Production Calendar", path: "/calendar" },
   { icon: Settings, label: "Categories", path: "/categories" },

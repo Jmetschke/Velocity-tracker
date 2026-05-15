@@ -152,6 +152,38 @@ export const committedBatches = sqliteTable("committed_batches", {
 export type CommittedBatch = typeof committedBatches.$inferSelect;
 export type InsertCommittedBatch = typeof committedBatches.$inferInsert;
 
+// ─── Product Launch Roadmaps ────────────────────────────────────────
+export const productLaunches = sqliteTable("product_launches", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  productName: text("productName").notNull(),
+  codename: text("codename"),
+  status: text("status", {
+    enum: ["draft", "in_progress", "paused", "launched", "cancelled"],
+  }).default("draft").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
+});
+
+export type ProductLaunch = typeof productLaunches.$inferSelect;
+export type InsertProductLaunch = typeof productLaunches.$inferInsert;
+
+export const productLaunchChecklistItems = sqliteTable("product_launch_checklist_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  productLaunchId: integer("productLaunchId").notNull(),
+  stageNumber: integer("stageNumber").notNull(),
+  stageName: text("stageName").notNull(),
+  taskText: text("taskText").notNull(),
+  isComplete: boolean("isComplete").default(false).notNull(),
+  completedAt: nullableTimestamp("completedAt"),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt"),
+  updatedAt: timestamp("updatedAt"),
+});
+
+export type ProductLaunchChecklistItem = typeof productLaunchChecklistItems.$inferSelect;
+export type InsertProductLaunchChecklistItem = typeof productLaunchChecklistItems.$inferInsert;
+
 // --- Notification Settings ---
 export const notificationSettings = sqliteTable("notification_settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),

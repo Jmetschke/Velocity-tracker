@@ -21,6 +21,10 @@ import {
   type InsertProductionBatch,
   committedBatches,
   type InsertCommittedBatch,
+  productLaunches,
+  type InsertProductLaunch,
+  productLaunchChecklistItems,
+  type InsertProductLaunchChecklistItem,
   notificationSettings,
   type InsertNotificationSettings,
   notificationHistory,
@@ -413,6 +417,88 @@ export async function deleteCommittedBatch(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   await db.delete(committedBatches).where(eq(committedBatches.id, id));
+}
+
+// ─── Product Launch Roadmaps ────────────────────────────────────────
+export async function getAllProductLaunches() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(productLaunches)
+    .orderBy(desc(productLaunches.updatedAt), desc(productLaunches.createdAt));
+}
+
+export async function getProductLaunchById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const rows = await db
+    .select()
+    .from(productLaunches)
+    .where(eq(productLaunches.id, id))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getProductLaunchChecklistItems(productLaunchId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(productLaunchChecklistItems)
+    .where(eq(productLaunchChecklistItems.productLaunchId, productLaunchId))
+    .orderBy(productLaunchChecklistItems.stageNumber, productLaunchChecklistItems.id);
+}
+
+export async function createProductLaunch(
+  data: InsertProductLaunch,
+  checklistItems: Omit<InsertProductLaunchChecklistItem, "productLaunchId">[]
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const id = await insertAndReturnId(db.insert(productLaunches).values(data), productLaunches.id);
+  if (!id) throw new Error("Failed to create product launch");
+
+  if (checklistItems.length > 0) {
+    await db.insert(productLaunchChecklistItems).values(
+      checklistItems.map((item) => ({
+        ...item,
+        productLaunchId: id,
+      }))
+    );
+  }
+
+  return id;
+}
+
+export async function updateProductLaunch(id: number, data: Partial<InsertProductLaunch>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(productLaunches)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(productLaunches.id, id));
+}
+
+export async function updateProductLaunchChecklistItem(
+  id: number,
+  data: Partial<InsertProductLaunchChecklistItem>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .update(productLaunchChecklistItems)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(productLaunchChecklistItems.id, id));
+}
+
+export async function deleteProductLaunch(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db
+    .delete(productLaunchChecklistItems)
+    .where(eq(productLaunchChecklistItems.productLaunchId, id));
+  await db.delete(productLaunches).where(eq(productLaunches.id, id));
 }
 
 // --- Notification Settings ---

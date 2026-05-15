@@ -9,13 +9,16 @@ import {
   Loader2,
   History,
   RotateCcw,
+  Rocket,
 } from "lucide-react";
 import { useState, useMemo } from "react";
+import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export default function VelocityPar() {
   const utils = trpc.useUtils();
+  const [, setLocation] = useLocation();
   const { data: skuList, isLoading } = trpc.skus.list.useQuery();
   const { data: velocityHistoryData } = trpc.sales.velocityHistory.useQuery();
   const updateVelocity = trpc.skus.updateVelocity.useMutation({
@@ -58,10 +61,16 @@ export default function VelocityPar() {
             Adjust daily velocities. Par = velocity x buffer days.
           </p>
         </div>
-        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setShowHistory(!showHistory)}>
-          <History className="h-4 w-4 mr-2" />
-          {showHistory ? "Hide History" : "Show History"}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setLocation("/product-launch-roadmap")}>
+            <Rocket className="h-4 w-4 mr-2" />
+            Product Launch
+          </Button>
+          <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setShowHistory(!showHistory)}>
+            <History className="h-4 w-4 mr-2" />
+            {showHistory ? "Hide History" : "Show History"}
+          </Button>
+        </div>
       </div>
 
       <Card>

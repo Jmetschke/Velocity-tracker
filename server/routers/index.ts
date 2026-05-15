@@ -5,3 +5,4 @@ export { salesRouter } from "./sales";
 export { committedRouter } from "./committed";
 export { productionRouter } from "./production";
 export { notificationsRouter } from "./notifications";
+export { productLaunchesRouter } from "./product-launches";
