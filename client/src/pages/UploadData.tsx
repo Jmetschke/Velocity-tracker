@@ -495,8 +495,10 @@ export default function UploadData() {
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Upload your QuickBooks "Sales by Product/Service Summary" export
-              (.xlsx). The parser maps QB product names to app SKUs, excludes
-              Pheotera and samples, then AI calculates daily velocity.
+              (.xlsx). You can also pull and upload the "Sales by
+              Product/Service Detail" report. The parser maps QB product names
+              to app SKUs, excludes Pheotera and samples, then AI calculates
+              daily velocity.
             </p>
             <div
               className="border-2 border-dashed rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer"
