@@ -49,6 +49,22 @@ const typeIcons: Record<CalendarItem["type"], typeof PackageCheck> = {
   test_pickup: FlaskConical,
 };
 
+const typeOrder: Record<CalendarItem["type"], number> = {
+  batch_hijnx: 0,
+  batch_sb: 1,
+  test_pickup: 2,
+  event: 3,
+  task: 4,
+};
+
+const orderedTypes: Array<[string, CalendarItem["type"]]> = [
+  ["Hijnx", "batch_hijnx"],
+  ["SB", "batch_sb"],
+  ["Pickup", "test_pickup"],
+  ["Event", "event"],
+  ["Task", "task"],
+];
+
 function dateKey(date: Date) {
   return format(date, "yyyy-MM-dd");
 }
@@ -60,6 +76,10 @@ function itemTouchesDay(item: CalendarItem, day: Date) {
 
 function formatDate(value: string) {
   return format(new Date(`${value}T00:00:00`), "MMM d, yyyy");
+}
+
+function compareItemsByType(a: CalendarItem, b: CalendarItem) {
+  return typeOrder[a.type] - typeOrder[b.type] || a.title.localeCompare(b.title);
 }
 
 export default function ProductionCalendar() {
@@ -83,12 +103,15 @@ export default function ProductionCalendar() {
     () =>
       [...(calendarItems as CalendarItem[])].sort((a, b) => {
         if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
-        return a.type.localeCompare(b.type) || a.title.localeCompare(b.title);
+        return compareItemsByType(a, b);
       }),
     [calendarItems]
   );
 
-  const getItemsForDay = (day: Date) => sortedItems.filter((item) => itemTouchesDay(item, day));
+  const getItemsForDay = (day: Date) =>
+    sortedItems
+      .filter((item) => itemTouchesDay(item, day))
+      .sort((a, b) => compareItemsByType(a, b) || a.startDate.localeCompare(b.startDate));
 
   const counts = useMemo(
     () =>
@@ -114,16 +137,10 @@ export default function ProductionCalendar() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        {[
-          ["Hijnx", counts.batch_hijnx, "batch_hijnx"],
-          ["SB", counts.batch_sb, "batch_sb"],
-          ["Events", counts.event, "event"],
-          ["Tasks", counts.task, "task"],
-          ["Pickups", counts.test_pickup, "test_pickup"],
-        ].map(([label, count, type]) => (
-          <div key={String(type)} className={`rounded-md border px-3 py-2 ${typeStyles[type as CalendarItem["type"]]}`}>
+        {orderedTypes.map(([label, type]) => (
+          <div key={type} className={`rounded-md border px-3 py-2 ${typeStyles[type]}`}>
             <div className="text-xs font-medium">{label}</div>
-            <div className="text-lg font-semibold tabular-nums">{count}</div>
+            <div className="text-lg font-semibold tabular-nums">{counts[type]}</div>
           </div>
         ))}
       </div>
@@ -135,15 +152,9 @@ export default function ProductionCalendar() {
               {format(calendarDays[0], "MMM d")} - {format(calendarDays[calendarDays.length - 1], "MMM d, yyyy")}
             </CardTitle>
             <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs">
-              {[
-                ["Hijnx", "batch_hijnx"],
-                ["SB", "batch_sb"],
-                ["Event", "event"],
-                ["Task", "task"],
-                ["Pickup", "test_pickup"],
-              ].map(([label, type]) => (
+              {orderedTypes.map(([label, type]) => (
                 <span key={type} className="flex items-center gap-1">
-                  <span className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded border ${typeStyles[type as CalendarItem["type"]]}`} />
+                  <span className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded border ${typeStyles[type]}`} />
                   {label}
                 </span>
               ))}
