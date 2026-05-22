@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useLocation } from "wouter";
 import { exportProductionNeedsPdf } from "@/lib/exportProductionPdf";
-import { format, formatDistanceToNow } from "date-fns";
+import { endOfMonth, format, formatDistanceToNow, startOfMonth } from "date-fns";
 import type { AppRouter } from "../../../server/routers";
 import type { inferRouterOutputs } from "@trpc/server";
 
@@ -215,10 +215,17 @@ function SkuMobileCard({ s }: { s: Suggestion }) {
 export default function Home() {
   const [, setLocation] = useLocation();
   const [showWhatIf, setShowWhatIf] = useState(false);
+  const calendarRange = useMemo(() => {
+    const today = new Date();
+    return {
+      startDate: format(startOfMonth(today), "yyyy-MM-dd"),
+      endDate: format(endOfMonth(today), "yyyy-MM-dd"),
+    };
+  }, []);
 
   const { data: suggestions, isLoading: loadingSuggestions } = trpc.production.suggestions.useQuery();
   const { data: inventory, isLoading: loadingInventory } = trpc.inventory.latestSnapshot.useQuery();
-  const { data: batches, isLoading: loadingBatches } = trpc.production.batches.useQuery();
+  const { data: batches, isLoading: loadingBatches } = trpc.production.batches.useQuery(calendarRange);
   const { data: salesUploads } = trpc.sales.uploads.useQuery();
   const { data: allSnapshots } = trpc.inventory.allSnapshots.useQuery();
 
@@ -249,7 +256,7 @@ export default function Home() {
   const criticalCount = suggestions?.suggestions?.filter((s) => s.urgency === "critical").length ?? 0;
   const warningCount = suggestions?.suggestions?.filter((s) => s.urgency === "warning").length ?? 0;
   const okCount = suggestions?.suggestions?.filter((s) => s.urgency === "ok").length ?? 0;
-  const activeBatches = batches?.filter((b) => b.status === "scheduled" || b.status === "in_progress").length ?? 0;
+  const activeBatches = batches?.filter((b) => b.type === "batch_hijnx" || b.type === "batch_sb").length ?? 0;
 
   // Build What-If SKU data from the raw skuInputs returned by the suggestions query
   const whatIfSkus: WhatIfSku[] = (suggestions?.skuInputs ?? []).map((s) => ({
@@ -340,7 +347,7 @@ export default function Home() {
         />
         <SummaryCard
           icon={<Calendar className="h-4 w-4" />}
-          label="Active Batches"
+          label="Calendar Batches"
           value={activeBatches}
           loading={loadingBatches}
         />

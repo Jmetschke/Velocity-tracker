@@ -33,6 +33,8 @@ import {
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
+let _calendarDb: ReturnType<typeof drizzle> | null = null;
+let _calendarClient: ReturnType<typeof createClient> | null = null;
 let _migrationsApplied = false;
 
 export async function getDb() {
@@ -51,20 +53,80 @@ export async function getDb() {
   return _db;
 }
 
-export async function applyMigrations() {
-  if (_migrationsApplied) return;
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] TURSO_DATABASE_URL is not configured; skipping migrations");
-    return;
+export async function getCalendarDb() {
+  if (!ENV.tursoCalendarUrl) return getDb();
+
+  if (!_calendarDb) {
+    try {
+      _calendarDb = drizzle(getCalendarClient());
+    } catch (error) {
+      console.warn("[Calendar Database] Failed to connect:", error);
+      _calendarDb = null;
+    }
   }
-  await migrate(db, { migrationsFolder: "./drizzle" });
-  _migrationsApplied = true;
+  return _calendarDb;
+}
+
+function getCalendarClient() {
+  if (!_calendarClient) {
+    _calendarClient = createClient({
+      url: ENV.tursoCalendarUrl,
+      authToken: ENV.tursoCalendarToken || undefined,
+    });
+  }
+  return _calendarClient;
+}
+
+export async function applyMigrations() {
+  if (!_migrationsApplied) {
+    const db = await getDb();
+    if (!db) {
+      console.warn("[Database] TURSO_DATABASE_URL is not configured; skipping migrations");
+    } else {
+      await migrate(db, { migrationsFolder: "./drizzle" });
+      _migrationsApplied = true;
+    }
+  }
+
 }
 
 async function insertAndReturnId(insertQuery: any, idColumn: any) {
   const rows = await insertQuery.returning({ id: idColumn });
   return rows[0]?.id;
+}
+
+export type CalendarScheduleRow = {
+  scheduleDate: string;
+  tasks: string;
+  updatedAt: string | null;
+};
+
+export async function getCalendarScheduleDays(startDate: string, endDate: string): Promise<CalendarScheduleRow[]> {
+  if (!ENV.tursoCalendarUrl) {
+    console.warn("[Calendar Database] TURSO_CALENDAR_URL is not configured; cannot read schedule_days");
+    return [];
+  }
+
+  try {
+    const result = await getCalendarClient().execute({
+      sql: `
+        SELECT schedule_date, tasks, updated_at
+        FROM schedule_days
+        WHERE schedule_date BETWEEN ? AND ?
+        ORDER BY schedule_date
+      `,
+      args: [startDate, endDate],
+    });
+
+    return result.rows.map((row) => ({
+      scheduleDate: String(row.schedule_date ?? ""),
+      tasks: typeof row.tasks === "string" ? row.tasks : "",
+      updatedAt: row.updated_at == null ? null : String(row.updated_at),
+    }));
+  } catch (error) {
+    console.warn("[Calendar Database] Failed to read schedule_days:", error);
+    return [];
+  }
 }
 
 // ─── Users ───────────────────────────────────────────────────────────
@@ -333,7 +395,7 @@ export async function updateProductionBatch(id: number, data: Partial<InsertProd
 export async function getProductionBatches(startDate?: Date, endDate?: Date) {
   const db = await getDb();
   if (!db) return [];
-  let query = db
+  return db
     .select({
       id: productionBatches.id,
       skuId: productionBatches.skuId,
@@ -348,8 +410,6 @@ export async function getProductionBatches(startDate?: Date, endDate?: Date) {
     .from(productionBatches)
     .leftJoin(skus, eq(productionBatches.skuId, skus.id))
     .orderBy(productionBatches.startDate);
-
-  return query;
 }
 
 export async function deleteProductionBatch(id: number) {

@@ -15,6 +15,8 @@ export const systemRouter = router({
       renderGitCommit: process.env.RENDER_GIT_COMMIT ?? null,
       tursoDatabaseUrlConfigured: Boolean(process.env.TURSO_DATABASE_URL),
       tursoAuthTokenConfigured: Boolean(process.env.TURSO_AUTH_TOKEN),
+      tursoCalendarUrlConfigured: Boolean(process.env.TURSO_CALENDAR_URL),
+      tursoCalendarTokenConfigured: Boolean(process.env.TURSO_CALENDAR_TOKEN),
     })),
 
   notifyOwner: adminProcedure

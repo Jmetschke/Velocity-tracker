@@ -260,6 +260,8 @@ All environment variables are injected by the platform. Do not commit `.env` fil
 |---|---|
 | `TURSO_DATABASE_URL` | Turso/libSQL database URL (`libsql://...`) |
 | `TURSO_AUTH_TOKEN` | Turso database auth token |
+| `TURSO_CALENDAR_URL` | Turso/libSQL database URL for production calendar batch data |
+| `TURSO_CALENDAR_TOKEN` | Turso calendar database auth token |
 | `BUILT_IN_FORGE_API_URL` | Manus built-in API base URL (LLM, storage, etc.) |
 | `BUILT_IN_FORGE_API_KEY` | Server-side bearer token for Manus APIs |
 | `VITE_FRONTEND_FORGE_API_KEY` | Client-side bearer token for Manus APIs |
