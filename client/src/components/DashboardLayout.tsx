@@ -24,6 +24,7 @@ import {
   Settings,
   ClipboardList,
   Rocket,
+  PackageCheck,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -37,6 +38,7 @@ const menuItems = [
   { icon: Rocket, label: "Product Launch", path: "/product-launch-roadmap" },
   { icon: ClipboardList, label: "Committed Batches", path: "/committed" },
   { icon: CalendarDays, label: "Production Calendar", path: "/calendar" },
+  { icon: PackageCheck, label: "Projected Units", path: "/projected-units" },
   { icon: Settings, label: "Categories", path: "/categories" },
 ];
 

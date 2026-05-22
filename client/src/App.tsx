@@ -17,6 +17,7 @@ const SkuManagement = lazy(() => import("./pages/SkuManagement"));
 const UploadData = lazy(() => import("./pages/UploadData"));
 const VelocityPar = lazy(() => import("./pages/VelocityPar"));
 const ProductionCalendar = lazy(() => import("./pages/ProductionCalendar"));
+const ProjectedUnits = lazy(() => import("./pages/ProjectedUnits"));
 const Categories = lazy(() => import("./pages/Categories"));
 const CommittedBatches = lazy(() => import("./pages/CommittedBatches"));
 const ProductLaunchRoadmap = lazy(() => import("./pages/ProductLaunchRoadmap"));
@@ -52,6 +53,7 @@ function Router() {
         <Route path="/upload" component={guarded(UploadData, "Upload Data")} />
         <Route path="/velocity" component={guarded(VelocityPar, "Velocity & Par")} />
         <Route path="/calendar" component={guarded(ProductionCalendar, "Production Calendar")} />
+        <Route path="/projected-units" component={guarded(ProjectedUnits, "Projected Units")} />
         <Route path="/categories" component={guarded(Categories, "Categories")} />
         <Route path="/committed" component={guarded(CommittedBatches, "Committed Batches")} />
         <Route path="/product-launch-roadmap" component={guarded(ProductLaunchRoadmap, "Product Launch Roadmap")} />

@@ -1,6 +1,7 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   CalendarDays,
   ClipboardList,
@@ -9,6 +10,7 @@ import {
   Loader2,
   MapPin,
   PackageCheck,
+  Printer,
 } from "lucide-react";
 import { useMemo } from "react";
 import {
@@ -82,6 +84,140 @@ function compareItemsByType(a: CalendarItem, b: CalendarItem) {
   return typeOrder[a.type] - typeOrder[b.type] || a.title.localeCompare(b.title);
 }
 
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function printableTypeClass(type: CalendarItem["type"]) {
+  return {
+    batch_hijnx: "hijnx",
+    batch_sb: "sb",
+    test_pickup: "pickup",
+    event: "event",
+    task: "task",
+  }[type];
+}
+
+function buildPrintDocument(days: Date[], items: CalendarItem[]) {
+  const range = `${format(days[0], "MMM d")} - ${format(days[days.length - 1], "MMM d, yyyy")}`;
+  const dayHtml = days
+    .map((day) => {
+      const dayItems = items.filter((item) => itemTouchesDay(item, day)).sort(compareItemsByType);
+      const entries = dayItems.length
+        ? dayItems
+            .map(
+              (item) => `
+                <div class="item ${printableTypeClass(item.type)}">
+                  <div class="item-head">
+                    <span class="label">${escapeHtml(item.label)}</span>
+                    ${item.quantity == null ? "" : `<span class="qty">${item.quantity.toLocaleString()} units</span>`}
+                  </div>
+                  <div class="title">${escapeHtml(item.title)}</div>
+                  ${
+                    item.details.length
+                      ? `<div class="details">${item.details.map(escapeHtml).join(" | ")}</div>`
+                      : ""
+                  }
+                </div>
+              `
+            )
+            .join("")
+        : `<div class="empty">No scheduled items</div>`;
+
+      return `
+        <section class="day">
+          <h2>${escapeHtml(format(day, "EEE, MMM d"))}</h2>
+          ${entries}
+        </section>
+      `;
+    })
+    .join("");
+
+  const detailRows = items
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(formatDate(item.startDate))}${item.endDate !== item.startDate ? ` - ${escapeHtml(formatDate(item.endDate))}` : ""}</td>
+          <td><span class="pill ${printableTypeClass(item.type)}">${escapeHtml(item.label)}</span></td>
+          <td>${escapeHtml(item.title)}</td>
+          <td class="num">${item.quantity?.toLocaleString() ?? "--"}</td>
+          <td>${item.details.map(escapeHtml).join(" | ") || "--"}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  return `<!doctype html>
+<html>
+  <head>
+    <title>Production Schedule ${escapeHtml(range)}</title>
+    <style>
+      @page { size: landscape; margin: 0.45in; }
+      * { box-sizing: border-box; }
+      body { margin: 0; color: #111827; font-family: Arial, Helvetica, sans-serif; font-size: 11px; }
+      header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 14px; }
+      h1 { margin: 0; font-size: 24px; line-height: 1.1; }
+      .range { color: #4b5563; font-size: 13px; margin-top: 4px; }
+      .printed { color: #6b7280; font-size: 10px; text-align: right; }
+      .legend { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+      .legend span, .pill { border: 1px solid currentColor; border-radius: 4px; padding: 2px 6px; font-weight: 700; white-space: nowrap; }
+      .grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+      .day { min-height: 148px; border: 1px solid #d1d5db; border-radius: 6px; padding: 6px; break-inside: avoid; }
+      .day h2 { margin: 0 0 5px; font-size: 11px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+      .item { border: 1px solid currentColor; border-radius: 4px; padding: 4px; margin-bottom: 4px; break-inside: avoid; }
+      .item-head { display: flex; justify-content: space-between; gap: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
+      .title { margin-top: 2px; font-weight: 700; overflow-wrap: anywhere; }
+      .details { margin-top: 2px; color: #4b5563; overflow-wrap: anywhere; }
+      .qty { white-space: nowrap; }
+      .empty { color: #9ca3af; font-style: italic; padding-top: 4px; }
+      .hijnx { color: #065f46; background: #ecfdf5; }
+      .sb { color: #075985; background: #f0f9ff; }
+      .pickup { color: #9f1239; background: #fff1f2; }
+      .event { color: #5b21b6; background: #f5f3ff; }
+      .task { color: #92400e; background: #fffbeb; }
+      .details-table { width: 100%; border-collapse: collapse; margin-top: 18px; page-break-before: always; }
+      .details-table th, .details-table td { border-bottom: 1px solid #e5e7eb; padding: 5px 6px; text-align: left; vertical-align: top; }
+      .details-table th { color: #4b5563; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+      .num { text-align: right; white-space: nowrap; }
+      .screen-actions { position: fixed; right: 16px; top: 16px; display: flex; gap: 8px; }
+      .screen-actions button { border: 1px solid #d1d5db; background: white; border-radius: 6px; padding: 8px 10px; cursor: pointer; }
+      @media print { .screen-actions { display: none; } body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+    </style>
+  </head>
+  <body>
+    <div class="screen-actions">
+      <button onclick="window.print()">Print</button>
+      <button onclick="window.close()">Close</button>
+    </div>
+    <header>
+      <div>
+        <h1>Production Schedule</h1>
+        <div class="range">${escapeHtml(range)}</div>
+      </div>
+      <div class="printed">Generated ${escapeHtml(format(new Date(), "MMM d, yyyy h:mm a"))}</div>
+    </header>
+    <div class="legend">
+      ${orderedTypes.map(([label, type]) => `<span class="${printableTypeClass(type)}">${escapeHtml(label)}</span>`).join("")}
+    </div>
+    <main class="grid">${dayHtml}</main>
+    <table class="details-table">
+      <thead>
+        <tr><th>Date</th><th>Type</th><th>Item</th><th>Units</th><th>Details</th></tr>
+      </thead>
+      <tbody>${detailRows || `<tr><td colspan="5">No schedule items found for this calendar range.</td></tr>`}</tbody>
+    </table>
+    <script>
+      window.addEventListener("load", () => setTimeout(() => window.print(), 300));
+    </script>
+  </body>
+</html>`;
+}
+
 export default function ProductionCalendar() {
   const calendarDays = useMemo(() => {
     const start = startOfWeek(new Date(), { weekStartsOn: 0 });
@@ -125,15 +261,35 @@ export default function ProductionCalendar() {
     [sortedItems]
   );
 
+  const openPrintableSchedule = () => {
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
+    printWindow.document.open();
+    printWindow.document.write(buildPrintDocument(calendarDays, sortedItems));
+    printWindow.document.close();
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-          Production Calendar
-        </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Read-only schedule for the current week and next 6 weeks.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
+            Production Calendar
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Read-only schedule for the current week and next 6 weeks.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full sm:w-auto"
+          onClick={openPrintableSchedule}
+          disabled={isLoading}
+        >
+          <Printer className="h-4 w-4 mr-2" />
+          Print Schedule
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
