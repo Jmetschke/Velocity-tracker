@@ -206,7 +206,7 @@ export default function ProductionCalendar() {
                           title={[item.label, item.title, ...item.details].filter(Boolean).join(" - ")}
                         >
                           <span className="font-medium">{item.label}</span>
-                          <span className="hidden sm:inline">: {item.title}</span>
+                          <span>: {item.title}</span>
                         </div>
                       ))}
                       {dayItems.length > 4 && (

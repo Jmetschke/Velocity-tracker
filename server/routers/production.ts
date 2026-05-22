@@ -174,6 +174,7 @@ export const productionRouter = router({
 
         payload.testPickups?.forEach((pickup, index) => {
           const pickupItems = Array.isArray(pickup.items) ? pickup.items.map(text).filter(Boolean) : [];
+          const pickupTitle = pickupItems.length ? pickupItems.join(", ") : "Test pickup";
           items.push({
             id: `${row.scheduleDate}-test-pickup-${index}`,
             date: row.scheduleDate,
@@ -181,9 +182,9 @@ export const productionRouter = router({
             endDate: row.scheduleDate,
             type: "test_pickup",
             label: "Pickup",
-            title: "Test pickup",
+            title: pickupTitle,
             quantity: null,
-            details: [text(pickup.time), ...pickupItems].filter(Boolean),
+            details: [text(pickup.time)].filter(Boolean),
             updatedAt: row.updatedAt,
           });
         });
