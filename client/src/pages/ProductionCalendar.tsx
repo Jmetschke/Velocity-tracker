@@ -1,11 +1,8 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   CalendarDays,
-  ChevronLeft,
-  ChevronRight,
   ClipboardList,
   Clock,
   FlaskConical,
@@ -13,18 +10,14 @@ import {
   MapPin,
   PackageCheck,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
-  addMonths,
+  addDays,
   eachDayOfInterval,
-  endOfMonth,
   format,
-  getDay,
   isSameDay,
-  isSameMonth,
   isWeekend,
-  startOfMonth,
-  subMonths,
+  startOfWeek,
 } from "date-fns";
 
 type CalendarItem = {
@@ -70,31 +63,11 @@ function formatDate(value: string) {
 }
 
 export default function ProductionCalendar() {
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-
   const calendarDays = useMemo(() => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
-    const days = eachDayOfInterval({ start, end });
-
-    const startDow = getDay(start);
-    const padStart: Date[] = [];
-    for (let i = startDow - 1; i >= 0; i--) {
-      const day = new Date(start);
-      day.setDate(day.getDate() - (i + 1));
-      padStart.push(day);
-    }
-
-    const endDow = getDay(end);
-    const padEnd: Date[] = [];
-    for (let i = 1; i < 7 - endDow; i++) {
-      const day = new Date(end);
-      day.setDate(day.getDate() + i);
-      padEnd.push(day);
-    }
-
-    return [...padStart, ...days, ...padEnd];
-  }, [currentMonth]);
+    const start = startOfWeek(new Date(), { weekStartsOn: 0 });
+    const end = addDays(start, 41);
+    return eachDayOfInterval({ start, end });
+  }, []);
 
   const queryRange = useMemo(
     () => ({
@@ -136,7 +109,7 @@ export default function ProductionCalendar() {
           Production Calendar
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Read-only schedule from the shared calendar database.
+          Read-only schedule for the current week and next 6 weeks.
         </p>
       </div>
 
@@ -158,17 +131,9 @@ export default function ProductionCalendar() {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-2 sm:gap-4">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <CardTitle className="text-base sm:text-lg min-w-36 text-center">
-                {format(currentMonth, "MMMM yyyy")}
-              </CardTitle>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
+            <CardTitle className="text-base sm:text-lg">
+              {format(calendarDays[0], "MMM d")} - {format(calendarDays[calendarDays.length - 1], "MMM d, yyyy")}
+            </CardTitle>
             <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs">
               {[
                 ["Hijnx", "batch_hijnx"],
@@ -202,15 +167,14 @@ export default function ProductionCalendar() {
               {calendarDays.map((day) => {
                 const dayItems = getItemsForDay(day);
                 const weekend = isWeekend(day);
-                const inMonth = isSameMonth(day, currentMonth);
                 const isToday = isSameDay(day, new Date());
 
                 return (
                   <div
                     key={dateKey(day)}
                     className={`min-h-[72px] sm:min-h-[118px] p-1 sm:p-1.5 ${
-                      weekend ? "bg-muted/60" : inMonth ? "bg-card" : "bg-muted/30"
-                    } ${!inMonth ? "opacity-40" : ""}`}
+                      weekend ? "bg-muted/60" : "bg-card"
+                    }`}
                   >
                     <div
                       className={`text-xs font-medium mb-1 ${
@@ -221,7 +185,7 @@ export default function ProductionCalendar() {
                             : "text-foreground"
                       }`}
                     >
-                      {format(day, "d")}
+                      {format(day, "MMM d")}
                     </div>
                     <div className="space-y-1">
                       {dayItems.slice(0, 4).map((item) => (
