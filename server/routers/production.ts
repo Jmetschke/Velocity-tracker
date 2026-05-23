@@ -43,6 +43,30 @@ function addDays(date: string, days: number) {
   return parsed.toISOString().slice(0, 10);
 }
 
+function dateKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function isWeekendDate(date: Date) {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+}
+
+function businessDateSpan(startDate: string, days: number) {
+  const activeDates: string[] = [];
+  const current = new Date(`${startDate}T00:00:00`);
+  const totalDays = Math.max(Math.floor(days), 1);
+
+  while (activeDates.length < totalDays) {
+    if (!isWeekendDate(current)) {
+      activeDates.push(dateKey(current));
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  return activeDates;
+}
+
 export const productionRouter = router({
   suggestions: protectedProcedure.query(async () => {
     const snapshot = await db.getLatestSnapshot();
@@ -95,6 +119,7 @@ export const productionRouter = router({
           title: string;
           quantity: number | null;
           details: string[];
+          activeDates?: string[];
           updatedAt: string | null;
         }> = [];
 
@@ -158,16 +183,18 @@ export const productionRouter = router({
 
         payload.tasks?.forEach((task, index) => {
           const days = numberOrNull(task.days) ?? 1;
+          const activeDates = businessDateSpan(row.scheduleDate, days);
           items.push({
             id: `${row.scheduleDate}-task-${index}`,
-            date: row.scheduleDate,
-            startDate: row.scheduleDate,
-            endDate: addDays(row.scheduleDate, days),
+            date: activeDates[0],
+            startDate: activeDates[0],
+            endDate: activeDates[activeDates.length - 1],
             type: "task",
             label: "Task",
             title: text(task.text) || "Task",
             quantity: null,
             details: days > 1 ? [`${days} days`] : [],
+            activeDates,
             updatedAt: row.updatedAt,
           });
         });

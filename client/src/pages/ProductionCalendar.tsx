@@ -32,6 +32,7 @@ type CalendarItem = {
   title: string;
   quantity: number | null;
   details: string[];
+  activeDates?: string[];
   updatedAt: string | null;
 };
 
@@ -73,6 +74,7 @@ function dateKey(date: Date) {
 
 function itemTouchesDay(item: CalendarItem, day: Date) {
   const key = dateKey(day);
+  if (item.activeDates?.length) return item.activeDates.includes(key);
   return item.startDate <= key && item.endDate >= key;
 }
 
@@ -323,7 +325,7 @@ export default function ProductionCalendar() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden">
+            <div className="grid grid-cols-[minmax(42px,0.45fr)_repeat(5,minmax(104px,1.35fr))_minmax(42px,0.45fr)] gap-px bg-border rounded-lg overflow-hidden overflow-x-auto">
               {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
                 <div key={index} className="bg-muted px-1 sm:px-2 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-medium text-muted-foreground">
                   <span className="sm:hidden">{day}</span>
@@ -340,7 +342,7 @@ export default function ProductionCalendar() {
                   <div
                     key={dateKey(day)}
                     className={`min-h-[72px] sm:min-h-[118px] p-1 sm:p-1.5 ${
-                      weekend ? "bg-muted/60" : "bg-card"
+                      weekend ? "bg-muted/60 text-[9px]" : "bg-card"
                     }`}
                   >
                     <div
