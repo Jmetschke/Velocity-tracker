@@ -4,6 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   ClipboardList,
   Clock,
   FlaskConical,
@@ -12,7 +14,7 @@ import {
   PackageCheck,
   Printer,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   addDays,
   eachDayOfInterval,
@@ -76,6 +78,13 @@ function itemTouchesDay(item: CalendarItem, day: Date) {
   const key = dateKey(day);
   if (item.activeDates?.length) return item.activeDates.includes(key);
   return item.startDate <= key && item.endDate >= key;
+}
+
+function itemIsCurrentOrFuture(item: CalendarItem, todayKey: string) {
+  if (item.activeDates?.length) {
+    return item.activeDates.some((activeDate) => activeDate >= todayKey);
+  }
+  return item.endDate >= todayKey;
 }
 
 function formatDate(value: string) {
@@ -221,11 +230,13 @@ function buildPrintDocument(days: Date[], items: CalendarItem[]) {
 }
 
 export default function ProductionCalendar() {
+  const currentWeekStart = useMemo(() => startOfWeek(new Date(), { weekStartsOn: 0 }), []);
+  const [viewStart, setViewStart] = useState(currentWeekStart);
+
   const calendarDays = useMemo(() => {
-    const start = startOfWeek(new Date(), { weekStartsOn: 0 });
-    const end = addDays(start, 41);
-    return eachDayOfInterval({ start, end });
-  }, []);
+    const end = addDays(viewStart, 41);
+    return eachDayOfInterval({ start: viewStart, end });
+  }, [viewStart]);
 
   const queryRange = useMemo(
     () => ({
@@ -250,6 +261,11 @@ export default function ProductionCalendar() {
     sortedItems
       .filter((item) => itemTouchesDay(item, day))
       .sort((a, b) => compareItemsByType(a, b) || a.startDate.localeCompare(b.startDate));
+
+  const scheduleDetailsItems = useMemo(() => {
+    const todayKey = dateKey(new Date());
+    return sortedItems.filter((item) => itemIsCurrentOrFuture(item, todayKey));
+  }, [sortedItems]);
 
   const counts = useMemo(
     () =>
@@ -306,9 +322,22 @@ export default function ProductionCalendar() {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <CardTitle className="text-base sm:text-lg">
-              {format(calendarDays[0], "MMM d")} - {format(calendarDays[calendarDays.length - 1], "MMM d, yyyy")}
-            </CardTitle>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewStart((date) => addDays(date, -42))}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <CardTitle className="text-base sm:text-lg min-w-[210px] text-center">
+                  {format(calendarDays[0], "MMM d")} - {format(calendarDays[calendarDays.length - 1], "MMM d, yyyy")}
+                </CardTitle>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewStart((date) => addDays(date, 42))}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button variant="outline" size="sm" className="h-8" onClick={() => setViewStart(currentWeekStart)}>
+                Today
+              </Button>
+            </div>
             <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-xs">
               {orderedTypes.map(([label, type]) => (
                 <span key={type} className="flex items-center gap-1">
@@ -386,9 +415,9 @@ export default function ProductionCalendar() {
           <CardTitle className="text-lg">Schedule Details</CardTitle>
         </CardHeader>
         <CardContent>
-          {!sortedItems.length ? (
+          {!scheduleDetailsItems.length ? (
             <p className="text-sm text-muted-foreground py-4 text-center">
-              No schedule items found for this calendar range.
+              No current or upcoming schedule items found.
             </p>
           ) : (
             <>
@@ -405,7 +434,7 @@ export default function ProductionCalendar() {
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedItems.map((item) => {
+                    {scheduleDetailsItems.map((item) => {
                       const Icon = typeIcons[item.type];
                       return (
                         <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
@@ -433,7 +462,7 @@ export default function ProductionCalendar() {
               </div>
 
               <div className="md:hidden space-y-2">
-                {sortedItems.map((item) => {
+                {scheduleDetailsItems.map((item) => {
                   const Icon = typeIcons[item.type];
                   return (
                     <div key={item.id} className="border rounded-md p-3 space-y-2">
