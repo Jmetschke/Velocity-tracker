@@ -17,6 +17,7 @@ export interface SkuScheduleInput {
   netBatchSize: number;
   leadTimeDays: number;
   committedQuantity?: number; // total units already committed in planned/in_progress batches
+  scheduledStartDate?: Date;   // date from an existing production calendar batch
 }
 
 export interface ScheduleSuggestion {
@@ -85,10 +86,12 @@ export function generateScheduleSuggestions(
     const stockoutDays = daysUntilStockout(projected, dailyVelocity);
     const deficit = parLevel - projected;
     const adjustedDeficit = Math.max(0, deficit - committed);
+    const startDate = sku.scheduledStartDate ?? nextBusinessDay(asOfDate);
+    const endDate = addBusinessDays(startDate, leadTimeDays);
+    const { week, year } = getISOWeek(startDate);
 
     // SKUs with zero velocity: include in list but show as no-data / ok
     if (dailyVelocity <= 0) {
-      const { week, year } = getISOWeek(asOfDate);
       suggestions.push({
         skuId,
         skuName,
@@ -103,8 +106,8 @@ export function generateScheduleSuggestions(
         daysUntilStockout: Infinity,
         batchesNeeded: 0,
         batchSize: netBatchSize,
-        suggestedStartDate: asOfDate,
-        suggestedEndDate: asOfDate,
+        suggestedStartDate: sku.scheduledStartDate ?? asOfDate,
+        suggestedEndDate: sku.scheduledStartDate ? endDate : asOfDate,
         urgency: "ok",
         calendarWeek: week,
         calendarYear: year,
@@ -118,10 +121,6 @@ export function generateScheduleSuggestions(
     } else if (adjustedDeficit > 0) {
       urgency = "warning";
     }
-
-    const startDate = nextBusinessDay(asOfDate);
-    const endDate = addBusinessDays(startDate, leadTimeDays);
-    const { week, year } = getISOWeek(startDate);
 
     if (adjustedDeficit <= 0 && deficit <= 0) {
       // On track - no deficit even before committed batches
@@ -139,8 +138,8 @@ export function generateScheduleSuggestions(
         daysUntilStockout: stockoutDays,
         batchesNeeded: 0,
         batchSize: netBatchSize,
-        suggestedStartDate: asOfDate,
-        suggestedEndDate: asOfDate,
+        suggestedStartDate: sku.scheduledStartDate ?? asOfDate,
+        suggestedEndDate: sku.scheduledStartDate ? endDate : asOfDate,
         urgency: "ok",
         calendarWeek: week,
         calendarYear: year,

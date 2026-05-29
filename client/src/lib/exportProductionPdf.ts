@@ -164,7 +164,7 @@ export async function exportProductionNeedsPdf(
     s.daysUntilStockout === Infinity ? "—" : `${s.daysUntilStockout}d`,
     s.committedQuantity > 0 ? fmtNum(s.committedQuantity) : "—",
     s.batchesNeeded > 0 ? String(s.batchesNeeded) : "—",
-    s.batchesNeeded > 0 ? `${format(new Date(s.suggestedStartDate), "MMM d")} (W${s.calendarWeek})` : "—",
+    s.committedQuantity > 0 || s.batchesNeeded > 0 ? `${format(new Date(s.suggestedStartDate), "MMM d")} (W${s.calendarWeek})` : "—",
   ]);
 
   const tableOptions: UserOptions = {

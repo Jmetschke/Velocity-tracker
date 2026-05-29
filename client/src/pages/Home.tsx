@@ -199,7 +199,7 @@ function SkuMobileCard({ s }: { s: Suggestion }) {
               <span>Batches: <span className="font-medium text-foreground">{s.batchesNeeded}</span></span>
             )}
           </span>
-          {s.batchesNeeded > 0 && (
+          {(s.committedQuantity > 0 || s.batchesNeeded > 0) && (
             <span className="text-muted-foreground">
               Start {format(new Date(s.suggestedStartDate), "MMM d")}
             </span>
@@ -484,7 +484,7 @@ export default function Home() {
                         </td>
                         <td className="px-3 py-3 text-right tabular-nums font-medium">{s.batchesNeeded || "--"}</td>
                         <td className="px-3 py-3 text-muted-foreground whitespace-nowrap">
-                          {s.batchesNeeded > 0 ? (
+                          {s.committedQuantity > 0 || s.batchesNeeded > 0 ? (
                             <span>
                               {format(new Date(s.suggestedStartDate), "MMM d")}
                               <span className="text-xs ml-1 opacity-70">(W{s.calendarWeek})</span>

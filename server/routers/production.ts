@@ -83,18 +83,24 @@ function findMatchingSkuId(
   return partialMatches[0]?.id ?? null;
 }
 
-async function getCalendarCommittedQuantitiesBySku(
+type CalendarCommittedBatch = {
+  quantity: number;
+  scheduledStartDate: Date;
+};
+
+async function getCalendarCommittedBatchesBySku(
   skus: Array<{ id: number; name: string }>,
   asOfDate: Date
 ) {
   const startDate = dateKey(asOfDate);
   const endDate = dateKey(addCalendarDays(asOfDate, 365));
   const rows = await db.getCalendarScheduleDays(startDate, endDate);
-  const committedBySkuId = new Map<number, number>();
+  const committedBySkuId = new Map<number, CalendarCommittedBatch>();
 
   for (const row of rows) {
     const payload = parseCalendarTasks(row.tasks);
     const batches = [...(payload.batchHijnx ?? []), ...(payload.batchSb ?? [])];
+    const scheduledStartDate = new Date(`${row.scheduleDate}T00:00:00`);
 
     for (const batch of batches) {
       const quantity = numberOrNull(batch.units);
@@ -103,7 +109,14 @@ async function getCalendarCommittedQuantitiesBySku(
       const skuId = findMatchingSkuId(text(batch.item), skus);
       if (skuId == null) continue;
 
-      committedBySkuId.set(skuId, (committedBySkuId.get(skuId) ?? 0) + quantity);
+      const existing = committedBySkuId.get(skuId);
+      committedBySkuId.set(skuId, {
+        quantity: (existing?.quantity ?? 0) + quantity,
+        scheduledStartDate:
+          existing && existing.scheduledStartDate <= scheduledStartDate
+            ? existing.scheduledStartDate
+            : scheduledStartDate,
+      });
     }
   }
 
@@ -138,11 +151,12 @@ export const productionRouter = router({
     const items = await db.getSnapshotItems(snapshot.id);
     const allSkus = await db.getAllSkus();
     const activeSkus = allSkus.filter((s) => s.isActive);
-    const calendarCommittedBySkuId = await getCalendarCommittedQuantitiesBySku(activeSkus, new Date());
+    const calendarCommittedBySkuId = await getCalendarCommittedBatchesBySku(activeSkus, new Date());
 
     const skuInputs = activeSkus
       .map((sku) => {
         const invItem = items.find((i) => i.skuId === sku.id);
+        const committedBatch = calendarCommittedBySkuId.get(sku.id);
         return {
           skuId: sku.id,
           skuName: sku.name,
@@ -152,7 +166,8 @@ export const productionRouter = router({
           parLevel: sku.parLevel ?? 0,
           netBatchSize: sku.customBatchSize ?? sku.netBatchSize ?? 950,
           leadTimeDays: sku.leadTimeDays ?? 5,
-          committedQuantity: calendarCommittedBySkuId.get(sku.id) ?? 0,
+          committedQuantity: committedBatch?.quantity ?? 0,
+          scheduledStartDate: committedBatch?.scheduledStartDate,
           bufferDays: sku.bufferDays ?? 14,
         };
       });

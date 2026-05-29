@@ -237,6 +237,19 @@ describe("generateScheduleSuggestions", () => {
     expect(results[0].urgency).toBe("ok");
   });
 
+  it("uses the scheduled calendar batch date as the suggested start date", () => {
+    const scheduledStartDate = new Date(2026, 2, 18);
+    const input = makeInput({
+      currentStock: 500,
+      parLevel: 1000,
+      committedQuantity: 600,
+      scheduledStartDate,
+    });
+    const results = generateScheduleSuggestions([input], baseDate);
+    expect(results[0].suggestedStartDate).toEqual(scheduledStartDate);
+    expect(results[0].calendarWeek).toBe(12);
+  });
+
   it("still shows critical urgency even with committed batches if stock is dangerously low", () => {
     const input = makeInput({
       currentStock: 100,
