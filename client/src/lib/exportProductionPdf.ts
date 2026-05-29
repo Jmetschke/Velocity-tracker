@@ -147,7 +147,7 @@ export async function exportProductionNeedsPdf(
   doc.setFontSize(7.5);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(...C.gray);
-  doc.text(`${suggestions.length} SKU${suggestions.length !== 1 ? "s" : ""} — sorted by urgency`, MARGIN + 32, cursorY);
+  doc.text(`${suggestions.length} SKU${suggestions.length !== 1 ? "s" : ""} — sorted by stockout days`, MARGIN + 32, cursorY);
   cursorY += 4;
 
   // ── Table ────────────────────────────────────────────────────────────────────

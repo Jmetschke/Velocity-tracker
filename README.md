@@ -142,6 +142,7 @@ The scheduling engine (`server/scheduling.ts`) is a pure function with no databa
 - Days to stockout uses **calendar days** (not business days), because sales occur 7 days a week. The formula is `floor(projectedStock / dailyVelocity)`.
 - Projected stock is `currentStock + wipStock` — WIP units are counted as available for the stockout calculation since they will be sellable within the lead time window.
 - Committed quantities are subtracted from the deficit before calculating batches needed, so the dashboard does not double-count already-planned production.
+- Dashboard suggestions are sorted by lowest `daysUntilStockout` first, with urgency (`critical`, `warning`, `ok`) used as the tie-breaker.
 - Urgency is `critical` when `daysUntilStockout <= leadTimeDays` (not enough time to produce before stockout), `warning` when there is an unmet adjusted deficit, and `ok` otherwise.
 - Par level is `ceil(dailyVelocity × bufferDays)`. The default buffer is 14 days.
 - Batch sizes use the net batch size (theoretical size minus the 5% loss factor), which is set at the category level and can be overridden per SKU.

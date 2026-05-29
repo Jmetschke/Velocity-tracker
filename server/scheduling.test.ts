@@ -167,16 +167,26 @@ describe("generateScheduleSuggestions", () => {
     expect(results[0].batchesNeeded).toBe(3);
   });
 
-  it("sorts by urgency: critical first, then warning, then ok", () => {
+  it("sorts by days until stockout first", () => {
     const inputs = [
-      makeInput({ skuId: 1, skuName: "OK SKU", currentStock: 1000, parLevel: 700 }),
-      makeInput({ skuId: 2, skuName: "Critical SKU", currentStock: 100, dailyVelocity: 50, parLevel: 700 }),
-      makeInput({ skuId: 3, skuName: "Warning SKU", currentStock: 500, parLevel: 700 }),
+      makeInput({ skuId: 1, skuName: "Warning SKU", currentStock: 500, dailyVelocity: 50, parLevel: 700 }),
+      makeInput({ skuId: 2, skuName: "OK SKU", currentStock: 100, dailyVelocity: 25, parLevel: 50, leadTimeDays: 3 }),
+      makeInput({ skuId: 3, skuName: "Critical SKU", currentStock: 300, dailyVelocity: 50, parLevel: 700 }),
     ];
     const results = generateScheduleSuggestions(inputs, baseDate);
-    expect(results[0].urgency).toBe("critical");
-    expect(results[1].urgency).toBe("warning");
-    expect(results[2].urgency).toBe("ok");
+    expect(results.map((r) => r.skuName)).toEqual(["OK SKU", "Critical SKU", "Warning SKU"]);
+    expect(results.map((r) => r.daysUntilStockout)).toEqual([4, 6, 10]);
+  });
+
+  it("uses urgency as the tie-breaker after stockout days", () => {
+    const inputs = [
+      makeInput({ skuId: 1, skuName: "OK SKU", currentStock: 200, dailyVelocity: 50, parLevel: 100, leadTimeDays: 3 }),
+      makeInput({ skuId: 2, skuName: "Critical SKU", currentStock: 200, dailyVelocity: 50, parLevel: 700, leadTimeDays: 5 }),
+      makeInput({ skuId: 3, skuName: "Warning SKU", currentStock: 200, dailyVelocity: 50, parLevel: 700, leadTimeDays: 3 }),
+    ];
+    const results = generateScheduleSuggestions(inputs, baseDate);
+    expect(results.map((r) => r.urgency)).toEqual(["critical", "warning", "ok"]);
+    expect(results.map((r) => r.daysUntilStockout)).toEqual([4, 4, 4]);
   });
 
   it("includes zero-velocity SKUs as ok with no batches needed", () => {

@@ -358,7 +358,7 @@ export default function Home() {
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <CardTitle className="text-lg">Production Needs</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">SKUs requiring production attention, sorted by urgency</p>
+            <p className="text-sm text-muted-foreground mt-1">SKUs requiring production attention, sorted by days to stockout</p>
           </div>
           <div className="flex items-center gap-2">
             {suggestions?.suggestions && suggestions.suggestions.length > 0 && (

@@ -172,9 +172,13 @@ export function generateScheduleSuggestions(
     });
   }
 
-  // Sort: critical first, then warning, then ok
+  // Sort by nearest stockout first, then apply urgency as the existing tie-breaker.
   const urgencyOrder = { critical: 0, warning: 1, ok: 2 };
-  suggestions.sort((a, b) => urgencyOrder[a.urgency] - urgencyOrder[b.urgency]);
+  suggestions.sort(
+    (a, b) =>
+      a.daysUntilStockout - b.daysUntilStockout ||
+      urgencyOrder[a.urgency] - urgencyOrder[b.urgency]
+  );
 
   return suggestions;
 }
