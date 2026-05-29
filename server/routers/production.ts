@@ -47,6 +47,69 @@ function dateKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function addCalendarDays(date: Date, days: number) {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function normalizeProductName(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/['']/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function findMatchingSkuId(
+  calendarTitle: string,
+  skus: Array<{ id: number; name: string }>
+) {
+  const titleKey = normalizeProductName(calendarTitle);
+  if (!titleKey) return null;
+
+  const keyedSkus = skus
+    .map((sku) => ({ ...sku, key: normalizeProductName(sku.name) }))
+    .filter((sku) => sku.key);
+
+  const exact = keyedSkus.find((sku) => sku.key === titleKey);
+  if (exact) return exact.id;
+
+  const partialMatches = keyedSkus
+    .filter((sku) => titleKey.includes(sku.key) || sku.key.includes(titleKey))
+    .sort((a, b) => b.key.length - a.key.length);
+
+  return partialMatches[0]?.id ?? null;
+}
+
+async function getCalendarCommittedQuantitiesBySku(
+  skus: Array<{ id: number; name: string }>,
+  asOfDate: Date
+) {
+  const startDate = dateKey(asOfDate);
+  const endDate = dateKey(addCalendarDays(asOfDate, 365));
+  const rows = await db.getCalendarScheduleDays(startDate, endDate);
+  const committedBySkuId = new Map<number, number>();
+
+  for (const row of rows) {
+    const payload = parseCalendarTasks(row.tasks);
+    const batches = [...(payload.batchHijnx ?? []), ...(payload.batchSb ?? [])];
+
+    for (const batch of batches) {
+      const quantity = numberOrNull(batch.units);
+      if (quantity == null || quantity <= 0) continue;
+
+      const skuId = findMatchingSkuId(text(batch.item), skus);
+      if (skuId == null) continue;
+
+      committedBySkuId.set(skuId, (committedBySkuId.get(skuId) ?? 0) + quantity);
+    }
+  }
+
+  return committedBySkuId;
+}
+
 function isWeekendDate(date: Date) {
   const day = date.getDay();
   return day === 0 || day === 6;
@@ -74,9 +137,10 @@ export const productionRouter = router({
 
     const items = await db.getSnapshotItems(snapshot.id);
     const allSkus = await db.getAllSkus();
+    const activeSkus = allSkus.filter((s) => s.isActive);
+    const calendarCommittedBySkuId = await getCalendarCommittedQuantitiesBySku(activeSkus, new Date());
 
-    const skuInputs = allSkus
-      .filter((s) => s.isActive)
+    const skuInputs = activeSkus
       .map((sku) => {
         const invItem = items.find((i) => i.skuId === sku.id);
         return {
@@ -88,7 +152,7 @@ export const productionRouter = router({
           parLevel: sku.parLevel ?? 0,
           netBatchSize: sku.customBatchSize ?? sku.netBatchSize ?? 950,
           leadTimeDays: sku.leadTimeDays ?? 5,
-          committedQuantity: 0,
+          committedQuantity: calendarCommittedBySkuId.get(sku.id) ?? 0,
           bufferDays: sku.bufferDays ?? 14,
         };
       });

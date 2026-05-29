@@ -22,7 +22,6 @@ import {
   CalendarDays,
   TrendingUp,
   Settings,
-  ClipboardList,
   Rocket,
   PackageCheck,
 } from "lucide-react";
@@ -36,7 +35,6 @@ const menuItems = [
   { icon: Upload, label: "Upload Data", path: "/upload" },
   { icon: TrendingUp, label: "Velocity & Par", path: "/velocity" },
   { icon: Rocket, label: "Product Launch", path: "/product-launch-roadmap" },
-  { icon: ClipboardList, label: "Committed Batches", path: "/committed" },
   { icon: CalendarDays, label: "Production Calendar", path: "/calendar" },
   { icon: PackageCheck, label: "Projected Units", path: "/projected-units" },
   { icon: Settings, label: "Categories", path: "/categories" },
