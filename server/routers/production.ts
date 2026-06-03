@@ -4,8 +4,8 @@ import * as db from "../db";
 import { generateScheduleSuggestions } from "../scheduling";
 
 type CalendarTasksPayload = {
-  batchHijnx?: Array<{ item?: unknown; units?: unknown }>;
-  batchSb?: Array<{ item?: unknown; units?: unknown }>;
+  batchHijnx?: CalendarBatchPayload[];
+  batchSb?: CalendarBatchPayload[];
   events?: Array<{
     date?: unknown;
     title?: unknown;
@@ -16,6 +16,18 @@ type CalendarTasksPayload = {
   }>;
   tasks?: Array<{ text?: unknown; days?: unknown }>;
   testPickups?: Array<{ time?: unknown; items?: unknown }>;
+};
+
+type CalendarBatchPayload = {
+  item?: unknown;
+  units?: unknown;
+  [key: string]: unknown;
+};
+
+type ProductionCompletion = {
+  completed: number;
+  total: number;
+  percent: number;
 };
 
 function text(value: unknown) {
@@ -35,6 +47,123 @@ function parseCalendarTasks(raw: string): CalendarTasksPayload {
   } catch {
     return {};
   }
+}
+
+function booleanOrNull(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1 ? true : value === 0 ? false : null;
+  if (typeof value !== "string") return null;
+
+  const normalized = value.trim().toLowerCase();
+  if (["true", "yes", "y", "1", "checked", "complete", "completed", "done"].includes(normalized)) {
+    return true;
+  }
+  if (
+    [
+      "false",
+      "no",
+      "n",
+      "0",
+      "unchecked",
+      "incomplete",
+      "pending",
+      "todo",
+      "open",
+      "planned",
+      "not_started",
+      "not started",
+      "in_progress",
+      "in progress",
+    ].includes(normalized)
+  ) {
+    return false;
+  }
+
+  return null;
+}
+
+function numberFromRecord(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function completionFromChecklistItems(items: unknown[]): ProductionCompletion | null {
+  if (!items.length) return null;
+
+  let completed = 0;
+  let total = 0;
+
+  for (const item of items) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+
+    const record = item as Record<string, unknown>;
+    const checked =
+      booleanOrNull(record.checked) ??
+      booleanOrNull(record.isChecked) ??
+      booleanOrNull(record.isComplete) ??
+      booleanOrNull(record.completed) ??
+      booleanOrNull(record.complete) ??
+      booleanOrNull(record.done) ??
+      booleanOrNull(record.value) ??
+      booleanOrNull(record.status);
+
+    if (checked == null) continue;
+    total += 1;
+    if (checked) completed += 1;
+  }
+
+  return total > 0 ? { completed, total, percent: Math.round((completed / total) * 100) } : null;
+}
+
+function completionFromChecklistMap(value: Record<string, unknown>): ProductionCompletion | null {
+  const states = Object.values(value).map(booleanOrNull).filter((state): state is boolean => state !== null);
+  if (!states.length) return null;
+
+  const completed = states.filter(Boolean).length;
+  return { completed, total: states.length, percent: Math.round((completed / states.length) * 100) };
+}
+
+function getProductionCompletion(batch: CalendarBatchPayload): ProductionCompletion | null {
+  const explicitPercent = numberFromRecord(batch, [
+    "completionPercent",
+    "percentComplete",
+    "completionPercentage",
+    "progressPercent",
+    "progress",
+  ]);
+  if (explicitPercent != null) {
+    const normalizedPercent = explicitPercent > 0 && explicitPercent <= 1 ? explicitPercent * 100 : explicitPercent;
+    const percent = Math.max(0, Math.min(100, Math.round(normalizedPercent)));
+    return { completed: percent, total: 100, percent };
+  }
+
+  const completed = numberFromRecord(batch, ["completedItems", "completeItems", "checkedItems", "itemsComplete"]);
+  const total = numberFromRecord(batch, ["totalItems", "checklistTotal", "completionTotal", "itemsTotal"]);
+  if (completed != null && total != null && total > 0) {
+    const clampedCompleted = Math.max(0, Math.min(completed, total));
+    return {
+      completed: clampedCompleted,
+      total,
+      percent: Math.max(0, Math.min(100, Math.round((clampedCompleted / total) * 100))),
+    };
+  }
+
+  for (const key of ["checklist", "checklistItems", "completionItems", "productionItems", "tasks", "steps"]) {
+    const value = batch[key];
+    if (Array.isArray(value)) {
+      const completion = completionFromChecklistItems(value);
+      if (completion) return completion;
+    } else if (value && typeof value === "object") {
+      const completion = completionFromChecklistMap(value as Record<string, unknown>);
+      if (completion) return completion;
+    }
+  }
+
+  return null;
 }
 
 function addDays(date: string, days: number) {
@@ -198,6 +327,7 @@ export const productionRouter = router({
           title: string;
           quantity: number | null;
           details: string[];
+          completion: ProductionCompletion | null;
           activeDates?: string[];
           updatedAt: string | null;
         }> = [];
@@ -214,6 +344,7 @@ export const productionRouter = router({
             title,
             quantity: numberOrNull(batch.units),
             details: text(batch.units) ? [`${text(batch.units)} units`] : [],
+            completion: getProductionCompletion(batch),
             updatedAt: row.updatedAt,
           });
         });
@@ -230,6 +361,7 @@ export const productionRouter = router({
             title,
             quantity: numberOrNull(batch.units),
             details: text(batch.units) ? [`${text(batch.units)} units`] : [],
+            completion: getProductionCompletion(batch),
             updatedAt: row.updatedAt,
           });
         });
@@ -256,6 +388,7 @@ export const productionRouter = router({
               text(event.company),
               days > 1 ? `${days} days` : "",
             ].filter(Boolean),
+            completion: null,
             updatedAt: row.updatedAt,
           });
         });
@@ -273,6 +406,7 @@ export const productionRouter = router({
             title: text(task.text) || "Task",
             quantity: null,
             details: days > 1 ? [`${days} days`] : [],
+            completion: null,
             activeDates,
             updatedAt: row.updatedAt,
           });
@@ -291,6 +425,7 @@ export const productionRouter = router({
             title: pickupTitle,
             quantity: null,
             details: [text(pickup.time)].filter(Boolean),
+            completion: null,
             updatedAt: row.updatedAt,
           });
         });

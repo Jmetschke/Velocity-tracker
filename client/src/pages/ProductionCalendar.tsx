@@ -34,6 +34,11 @@ type CalendarItem = {
   title: string;
   quantity: number | null;
   details: string[];
+  completion?: {
+    completed: number;
+    total: number;
+    percent: number;
+  } | null;
   activeDates?: string[];
   updatedAt: string | null;
 };
@@ -95,6 +100,10 @@ function compareItemsByType(a: CalendarItem, b: CalendarItem) {
   return typeOrder[a.type] - typeOrder[b.type] || a.title.localeCompare(b.title);
 }
 
+function isProductionBatch(item: CalendarItem) {
+  return item.type === "batch_hijnx" || item.type === "batch_sb";
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -130,6 +139,15 @@ function buildPrintDocument(days: Date[], items: CalendarItem[]) {
                   </div>
                   <div class="title">${escapeHtml(item.title)}</div>
                   ${
+                    isProductionBatch(item) && item.completion
+                      ? `<div class="completion">
+                          <div><span>Completion</span><strong>${item.completion.percent}%</strong></div>
+                          <div class="completion-track"><span style="width: ${item.completion.percent}%"></span></div>
+                          <small>${item.completion.completed} of ${item.completion.total} items checked</small>
+                        </div>`
+                      : ""
+                  }
+                  ${
                     item.details.length
                       ? `<div class="details">${item.details.map(escapeHtml).join(" | ")}</div>`
                       : ""
@@ -157,6 +175,11 @@ function buildPrintDocument(days: Date[], items: CalendarItem[]) {
           <td><span class="pill ${printableTypeClass(item.type)}">${escapeHtml(item.label)}</span></td>
           <td>${escapeHtml(item.title)}</td>
           <td class="num">${item.quantity?.toLocaleString() ?? "--"}</td>
+          <td>${
+            isProductionBatch(item) && item.completion
+              ? `${item.completion.percent}% (${item.completion.completed}/${item.completion.total})`
+              : "--"
+          }</td>
           <td>${item.details.map(escapeHtml).join(" | ") || "--"}</td>
         </tr>
       `
@@ -184,6 +207,11 @@ function buildPrintDocument(days: Date[], items: CalendarItem[]) {
       .item-head { display: flex; justify-content: space-between; gap: 6px; font-size: 9px; font-weight: 700; text-transform: uppercase; }
       .title { margin-top: 2px; font-weight: 700; overflow-wrap: anywhere; }
       .details { margin-top: 2px; color: #4b5563; overflow-wrap: anywhere; }
+      .completion { margin-top: 4px; }
+      .completion div:first-child { display: flex; justify-content: space-between; gap: 6px; font-size: 9px; color: #374151; }
+      .completion-track { height: 4px; background: rgba(17, 24, 39, 0.14); border-radius: 999px; overflow: hidden; margin-top: 2px; }
+      .completion-track span { display: block; height: 100%; background: currentColor; border-radius: inherit; }
+      .completion small { display: block; margin-top: 2px; color: #4b5563; font-size: 8px; }
       .qty { white-space: nowrap; }
       .empty { color: #9ca3af; font-style: italic; padding-top: 4px; }
       .hijnx { color: #065f46; background: #ecfdf5; }
@@ -218,9 +246,9 @@ function buildPrintDocument(days: Date[], items: CalendarItem[]) {
     <main class="grid">${dayHtml}</main>
     <table class="details-table">
       <thead>
-        <tr><th>Date</th><th>Type</th><th>Item</th><th>Units</th><th>Details</th></tr>
+        <tr><th>Date</th><th>Type</th><th>Item</th><th>Units</th><th>Completion</th><th>Details</th></tr>
       </thead>
-      <tbody>${detailRows || `<tr><td colspan="5">No schedule items found for this calendar range.</td></tr>`}</tbody>
+      <tbody>${detailRows || `<tr><td colspan="6">No schedule items found for this calendar range.</td></tr>`}</tbody>
     </table>
     <script>
       window.addEventListener("load", () => setTimeout(() => window.print(), 300));
@@ -389,11 +417,12 @@ export default function ProductionCalendar() {
                       {dayItems.slice(0, 4).map((item) => (
                         <div
                           key={item.id}
-                          className={`text-[10px] leading-tight px-1 py-0.5 rounded border ${typeStyles[item.type]}`}
+                          className={`text-[10px] leading-tight px-1 py-1 rounded border ${typeStyles[item.type]}`}
                           title={[item.label, item.title, ...item.details].filter(Boolean).join(" - ")}
                         >
                           <span className="font-medium">{item.label}</span>
                           <span>: {item.title}</span>
+                          <CompletionTracker item={item} compact />
                         </div>
                       ))}
                       {dayItems.length > 4 && (
@@ -429,6 +458,7 @@ export default function ProductionCalendar() {
                       <th className="pb-3 font-medium text-muted-foreground">Type</th>
                       <th className="pb-3 font-medium text-muted-foreground">Item</th>
                       <th className="pb-3 font-medium text-muted-foreground text-right">Units</th>
+                      <th className="pb-3 font-medium text-muted-foreground">Completion</th>
                       <th className="pb-3 font-medium text-muted-foreground">Details</th>
                       <th className="pb-3 font-medium text-muted-foreground">Updated</th>
                     </tr>
@@ -450,6 +480,9 @@ export default function ProductionCalendar() {
                           </td>
                           <td className="py-3 font-medium text-foreground">{item.title}</td>
                           <td className="py-3 text-right tabular-nums">{item.quantity?.toLocaleString() ?? "--"}</td>
+                          <td className="py-3 min-w-[150px]">
+                            <CompletionTracker item={item} />
+                          </td>
                           <td className="py-3 text-muted-foreground text-xs max-w-[320px]">
                             <DetailList details={item.details} />
                           </td>
@@ -488,6 +521,7 @@ export default function ProductionCalendar() {
                         )}
                         <DetailList details={item.details} />
                       </div>
+                      <CompletionTracker item={item} />
                     </div>
                   );
                 })}
@@ -496,6 +530,31 @@ export default function ProductionCalendar() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function CompletionTracker({ item, compact = false }: { item: CalendarItem; compact?: boolean }) {
+  if (!isProductionBatch(item) || !item.completion) {
+    return compact ? null : <span className="text-xs text-muted-foreground">--</span>;
+  }
+
+  const { completed, total, percent } = item.completion;
+
+  return (
+    <div className={compact ? "mt-1 space-y-0.5" : "space-y-1"}>
+      <div className={`flex items-center justify-between gap-2 ${compact ? "text-[9px]" : "text-xs"}`}>
+        <span className="font-medium">Completion</span>
+        <span className="tabular-nums font-semibold">{percent}%</span>
+      </div>
+      <div className={`w-full overflow-hidden rounded-full bg-background/70 ${compact ? "h-1" : "h-2 bg-muted"}`}>
+        <div className="h-full rounded-full bg-current" style={{ width: `${percent}%` }} />
+      </div>
+      {!compact && (
+        <div className="text-[11px] text-muted-foreground tabular-nums">
+          {completed} of {total} items checked
+        </div>
+      )}
     </div>
   );
 }
