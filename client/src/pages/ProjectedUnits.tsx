@@ -61,11 +61,11 @@ function SkuMobileCard({
 }) {
   return (
     <div className="border rounded-lg p-3 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <span className="font-medium text-foreground text-sm truncate flex-1 mr-2">{s.skuName}</span>
         <UrgencyBadge urgency={s.urgency} />
       </div>
-      <div className="grid grid-cols-2 gap-2 text-xs">
+      <div className="grid grid-cols-1 gap-2 text-xs min-[380px]:grid-cols-2">
         <div>
           <span className="text-muted-foreground block">Available</span>
           <span className="tabular-nums font-medium">{s.currentStock.toLocaleString()}</span>
@@ -77,7 +77,7 @@ function SkuMobileCard({
           </span>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
         <div>
           <span className="text-muted-foreground block">In Testing</span>
           <span className="tabular-nums text-muted-foreground">{s.wipStock > 0 ? s.wipStock.toLocaleString() : "--"}</span>
@@ -145,7 +145,7 @@ export default function ProjectedUnits() {
             Production needs with units scheduled in the next 30 days from the shared calendar.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => setLocation("/calendar")}>
+        <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setLocation("/calendar")}>
           View Calendar <ArrowRight className="ml-1 h-4 w-4" />
         </Button>
       </div>

@@ -138,7 +138,7 @@ export default function VelocityPar() {
               <div className="md:hidden space-y-2">
                 {activeSkus.map((sku) => (
                   <div key={sku.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-2">
                       <span className="font-medium text-sm truncate flex-1 mr-2">{sku.name}</span>
                       {editingId === sku.id ? (
                         <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setEditingId(null)}>Cancel</Button>
@@ -146,8 +146,8 @@ export default function VelocityPar() {
                         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setEditingId(sku.id); setEditValue(String(parseFloat(String(sku.dailyVelocity ?? 0)))); }}>Edit</Button>
                       )}
                     </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">{sku.categoryName}</span>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-muted-foreground truncate">{sku.categoryName}</span>
                       <Badge variant="outline" className={`text-[10px] ${sku.velocitySource === "ai" ? "border-primary/50 text-primary" : sku.velocitySource === "manual" ? "border-yellow-500/50 text-yellow-700" : ""}`}>{sku.velocitySource}</Badge>
                     </div>
                     {editingId === sku.id ? (
@@ -156,7 +156,7 @@ export default function VelocityPar() {
                         <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => handleSaveVelocity(sku.id)} disabled={updateVelocity.isPending}><Save className="h-3.5 w-3.5" /></Button>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-3 gap-2 text-xs">
+                      <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
                         <div><span className="text-muted-foreground block">Velocity</span><span className="tabular-nums">{parseFloat(String(sku.dailyVelocity ?? 0)).toFixed(1)}/day</span></div>
                         <div><span className="text-muted-foreground block">Buffer</span><span className="tabular-nums">{sku.bufferDays}d</span></div>
                         <div><span className="text-muted-foreground block">Par Level</span><span className="tabular-nums font-medium">{(sku.parLevel ?? 0).toLocaleString()}</span></div>
@@ -215,7 +215,7 @@ export default function VelocityPar() {
                 {/* Mobile history cards */}
                 <div className="md:hidden space-y-2">
                   {velocityHistoryData.slice(0, 50).map((h) => (
-                    <div key={h.id} className="border rounded-lg p-2.5 flex items-center justify-between">
+                    <div key={h.id} className="border rounded-lg p-2.5 flex flex-col gap-2 min-[380px]:flex-row min-[380px]:items-center min-[380px]:justify-between">
                       <div className="min-w-0">
                         <div className="font-medium text-sm truncate">{h.skuName}</div>
                         <div className="text-[10px] text-muted-foreground">{format(new Date(h.recordedAt), "MMM d, h:mm a")}</div>

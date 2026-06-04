@@ -110,7 +110,7 @@ export default function Categories() {
           placeholder="e.g., Chunks, Minis, Vapes"
         />
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label>Theoretical Batch Size</Label>
           <Input
@@ -162,7 +162,7 @@ export default function Categories() {
               <Plus className="h-4 w-4 mr-2" /> Add Category
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg">
             <DialogHeader>
               <DialogTitle>Add New Category</DialogTitle>
             </DialogHeader>
@@ -234,14 +234,14 @@ export default function Categories() {
               <div className="sm:hidden space-y-2">
                 {categories.map((cat) => (
                   <div key={cat.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{cat.name}</span>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="min-w-0 flex-1 truncate font-medium text-sm">{cat.name}</span>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(cat)}><Pencil className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeleteTarget({ id: cat.id, name: cat.name })}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
                       <div><span className="text-muted-foreground block">Theoretical</span><span className="tabular-nums">{cat.theoreticalBatchSize.toLocaleString()}</span></div>
                       <div><span className="text-muted-foreground block">Loss</span><span className="tabular-nums">{cat.lossPercent}%</span></div>
                       <div><span className="text-muted-foreground block">Net Batch</span><span className="tabular-nums font-medium">{cat.netBatchSize.toLocaleString()}</span></div>
@@ -256,7 +256,7 @@ export default function Categories() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
           </DialogHeader>
@@ -276,7 +276,7 @@ export default function Categories() {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <AlertTriangle className="h-5 w-5" />
@@ -287,11 +287,12 @@ export default function Categories() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setDeleteTarget(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
+              className="w-full sm:w-auto"
               onClick={() => deleteTarget && deleteCategory.mutate({ id: deleteTarget.id })}
               disabled={deleteCategory.isPending}
             >

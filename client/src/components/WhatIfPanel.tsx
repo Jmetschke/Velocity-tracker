@@ -88,7 +88,7 @@ function WhatIfMobileCard({
   const changed = r.adjustedVelocity !== r.originalVelocity;
   return (
     <div className={`border rounded-lg p-3 space-y-2 ${changed ? "bg-primary/[0.03] border-primary/30" : ""}`}>
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <Badge
             variant={r.urgency === "critical" ? "destructive" : "outline"}
@@ -126,7 +126,7 @@ function WhatIfMobileCard({
       </div>
 
       {/* Metrics grid */}
-      <div className="grid grid-cols-3 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
         <div>
           <span className="text-muted-foreground block">Par Level</span>
           <DiffCell original={r.originalParLevel} adjusted={r.adjustedParLevel} />
@@ -216,7 +216,7 @@ export function WhatIfPanel({ skus, onClose, onApply, isApplying }: WhatIfPanelP
   return (
     <Card className="border-2 border-dashed border-primary/40 bg-primary/[0.02]">
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base sm:text-lg flex items-center gap-2">
             <FlaskConical className="h-5 w-5 text-primary" />
             What-If Scratchpad

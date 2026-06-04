@@ -368,6 +368,7 @@ export default function ProductLaunchRoadmap() {
                       <Button
                         size="sm"
                         variant="outline"
+                        className="w-full sm:w-auto"
                         onClick={handleSaveLaunch}
                         disabled={updateLaunch.isPending}
                       >
@@ -381,7 +382,7 @@ export default function ProductLaunchRoadmap() {
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-destructive hover:text-destructive"
+                        className="w-full text-destructive hover:text-destructive sm:w-auto"
                         onClick={() => handleDelete(detail.launch)}
                         disabled={deleteLaunch.isPending}
                       >
@@ -464,7 +465,7 @@ export default function ProductLaunchRoadmap() {
                         {items.map((item, index) => (
                           <div key={item.id}>
                             {index > 0 && <Separator className="mb-3" />}
-                            <div className="grid grid-cols-[auto_1fr] gap-3">
+                            <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-3">
                               <Checkbox
                                 checked={item.isComplete}
                                 onCheckedChange={(checked) =>
@@ -515,7 +516,7 @@ export default function ProductLaunchRoadmap() {
                                       }))
                                     }
                                     placeholder="Task notes"
-                                    className="min-h-10"
+                                    className="min-h-10 text-sm"
                                   />
                                   <Button
                                     size="sm"

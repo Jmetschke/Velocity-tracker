@@ -208,11 +208,11 @@ function DashboardLayoutContent({
       <SidebarInset>
         {isMobile && (
           <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex flex-col gap-1">
-                  <span className="tracking-tight text-foreground">
+                  <span className="truncate tracking-tight text-foreground">
                     {activeMenuItem?.label ?? "Menu"}
                   </span>
                 </div>
@@ -220,7 +220,7 @@ function DashboardLayoutContent({
             </div>
           </div>
         )}
-        <main className="flex-1 p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-x-hidden p-3 sm:p-4 md:p-6">{children}</main>
       </SidebarInset>
     </>
   );

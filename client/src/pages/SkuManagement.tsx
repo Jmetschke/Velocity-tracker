@@ -143,7 +143,7 @@ export default function SkuManagement() {
               <Plus className="h-4 w-4 mr-2" /> Add SKU
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>Add New SKU</DialogTitle>
             </DialogHeader>
@@ -174,7 +174,7 @@ export default function SkuManagement() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Daily Velocity</Label>
                   <Input
@@ -196,7 +196,7 @@ export default function SkuManagement() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <Label>Lead Time (Days)</Label>
                   <Input
@@ -294,19 +294,19 @@ export default function SkuManagement() {
               {/* Mobile card layout */}
               <div className="lg:hidden space-y-2">
                 {activeSkus.map((sku) => (
-                  <div key={sku.id} className="border rounded-lg p-3 space-y-2">
-                    <div className="flex items-center justify-between">
+                  <div key={sku.id} className="border rounded-lg p-3 space-y-3">
+                    <div className="flex items-start justify-between gap-2">
                       <span className="font-medium text-sm truncate flex-1 mr-2">{sku.name}</span>
                       <div className="flex items-center gap-1 shrink-0">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(sku)}><Pencil className="h-3.5 w-3.5" /></Button>
                         <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteSku.mutate({ id: sku.id })}><Trash2 className="h-3.5 w-3.5" /></Button>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">{sku.categoryName}</span>
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-muted-foreground truncate">{sku.categoryName}</span>
                       <Badge variant="outline" className="text-[10px]">{sku.velocitySource}</Badge>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
                       <div><span className="text-muted-foreground block">Vel/Day</span><span className="tabular-nums">{parseFloat(String(sku.dailyVelocity ?? 0)).toFixed(1)}</span></div>
                       <div><span className="text-muted-foreground block">Par Level</span><span className="tabular-nums">{(sku.parLevel ?? 0).toLocaleString()}</span></div>
                       <div><span className="text-muted-foreground block">Batch</span><span className="tabular-nums">{(sku.customBatchSize ?? sku.netBatchSize ?? 0).toLocaleString()}</span></div>
@@ -331,33 +331,28 @@ export default function SkuManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm opacity-60">
-                <tbody>
-                  {inactiveSkus.map((sku) => (
-                    <tr key={sku.id} className="border-b last:border-0">
-                      <td className="py-2">{sku.name}</td>
-                      <td className="py-2 text-muted-foreground">
-                        {sku.categoryName}
-                      </td>
-                      <td className="py-2 text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() =>
-                            updateSku.mutate({
-                              id: sku.id,
-                              isActive: true,
-                            })
-                          }
-                        >
-                          Reactivate
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {inactiveSkus.map((sku) => (
+                <div key={sku.id} className="flex flex-col gap-2 border-b py-2 last:border-0 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0 opacity-70">
+                    <p className="truncate text-sm font-medium">{sku.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{sku.categoryName}</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full sm:w-auto"
+                    onClick={() =>
+                      updateSku.mutate({
+                        id: sku.id,
+                        isActive: true,
+                      })
+                    }
+                  >
+                    Reactivate
+                  </Button>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -365,7 +360,7 @@ export default function SkuManagement() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Edit SKU</DialogTitle>
           </DialogHeader>
@@ -395,7 +390,7 @@ export default function SkuManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <Label>Buffer Days</Label>
                 <Input

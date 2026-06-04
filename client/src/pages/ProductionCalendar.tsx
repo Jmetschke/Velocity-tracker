@@ -382,58 +382,60 @@ export default function ProductionCalendar() {
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid grid-cols-[minmax(42px,0.45fr)_repeat(5,minmax(104px,1.35fr))_minmax(42px,0.45fr)] gap-px bg-border rounded-lg overflow-hidden overflow-x-auto">
-              {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
-                <div key={index} className="bg-muted px-1 sm:px-2 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-medium text-muted-foreground">
-                  <span className="sm:hidden">{day}</span>
-                  <span className="hidden sm:inline">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index]}</span>
-                </div>
-              ))}
+            <div className="overflow-x-auto rounded-lg border">
+              <div className="grid min-w-[760px] grid-cols-[minmax(42px,0.45fr)_repeat(5,minmax(104px,1.35fr))_minmax(42px,0.45fr)] gap-px bg-border">
+                {["S", "M", "T", "W", "T", "F", "S"].map((day, index) => (
+                  <div key={index} className="bg-muted px-1 sm:px-2 py-1.5 sm:py-2 text-center text-[10px] sm:text-xs font-medium text-muted-foreground">
+                    <span className="sm:hidden">{day}</span>
+                    <span className="hidden sm:inline">{["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index]}</span>
+                  </div>
+                ))}
 
-              {calendarDays.map((day) => {
-                const dayItems = getItemsForDay(day);
-                const weekend = isWeekend(day);
-                const isToday = isSameDay(day, new Date());
+                {calendarDays.map((day) => {
+                  const dayItems = getItemsForDay(day);
+                  const weekend = isWeekend(day);
+                  const isToday = isSameDay(day, new Date());
 
-                return (
-                  <div
-                    key={dateKey(day)}
-                    className={`min-h-[72px] sm:min-h-[118px] p-1 sm:p-1.5 ${
-                      weekend ? "bg-muted/60 text-[9px]" : "bg-card"
-                    }`}
-                  >
+                  return (
                     <div
-                      className={`text-xs font-medium mb-1 ${
-                        isToday
-                          ? "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center"
-                          : weekend
-                            ? "text-muted-foreground/50"
-                            : "text-foreground"
+                      key={dateKey(day)}
+                      className={`min-h-[72px] sm:min-h-[118px] p-1 sm:p-1.5 ${
+                        weekend ? "bg-muted/60 text-[9px]" : "bg-card"
                       }`}
                     >
-                      {format(day, "MMM d")}
+                      <div
+                        className={`text-xs font-medium mb-1 ${
+                          isToday
+                            ? "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center"
+                            : weekend
+                              ? "text-muted-foreground/50"
+                              : "text-foreground"
+                        }`}
+                      >
+                        {format(day, "MMM d")}
+                      </div>
+                      <div className="space-y-1">
+                        {dayItems.slice(0, 4).map((item) => (
+                          <div
+                            key={item.id}
+                            className={`text-[10px] leading-tight px-1 py-1 rounded border ${typeStyles[item.type]}`}
+                            title={[item.label, item.title, ...item.details].filter(Boolean).join(" - ")}
+                          >
+                            <span className="font-medium">{item.label}</span>
+                            <span>: {item.title}</span>
+                            <CompletionTracker item={item} compact />
+                          </div>
+                        ))}
+                        {dayItems.length > 4 && (
+                          <div className="text-[10px] text-muted-foreground px-1">
+                            +{dayItems.length - 4} more
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      {dayItems.slice(0, 4).map((item) => (
-                        <div
-                          key={item.id}
-                          className={`text-[10px] leading-tight px-1 py-1 rounded border ${typeStyles[item.type]}`}
-                          title={[item.label, item.title, ...item.details].filter(Boolean).join(" - ")}
-                        >
-                          <span className="font-medium">{item.label}</span>
-                          <span>: {item.title}</span>
-                          <CompletionTracker item={item} compact />
-                        </div>
-                      ))}
-                      {dayItems.length > 4 && (
-                        <div className="text-[10px] text-muted-foreground px-1">
-                          +{dayItems.length - 4} more
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           )}
         </CardContent>

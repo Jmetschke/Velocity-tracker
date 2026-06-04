@@ -127,14 +127,14 @@ function SummaryCard({ icon, label, value, loading, className }: {
 }) {
   return (
     <Card className={className}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+      <CardHeader className="pb-2 px-3 pt-3 sm:px-6 sm:pt-6">
+        <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
           {icon}
           {label}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-bold">
+      <CardContent className="px-3 pb-3 sm:px-6 sm:pb-6">
+        <div className="text-2xl sm:text-3xl font-bold">
           {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : value}
         </div>
       </CardContent>
@@ -147,11 +147,11 @@ function SummaryCard({ icon, label, value, loading, className }: {
 function SkuMobileCard({ s }: { s: Suggestion }) {
   return (
     <div className="border rounded-lg p-3 space-y-2">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-2">
         <span className="font-medium text-foreground text-sm truncate flex-1 mr-2">{s.skuName}</span>
         <UrgencyBadge urgency={s.urgency} />
       </div>
-      <div className="grid grid-cols-3 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
         <div>
           <span className="text-muted-foreground block">Available</span>
           <span className="tabular-nums font-medium">{s.currentStock.toLocaleString()}</span>
@@ -165,7 +165,7 @@ function SkuMobileCard({ s }: { s: Suggestion }) {
           <span className="tabular-nums font-medium">{s.projectedStock.toLocaleString()}</span>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
         <div>
           <span className="text-muted-foreground block">Par Level</span>
           <span className="tabular-nums">{s.parLevel.toLocaleString()}</span>
@@ -190,7 +190,7 @@ function SkuMobileCard({ s }: { s: Suggestion }) {
         </div>
       </div>
       {(s.committedQuantity > 0 || s.batchesNeeded > 0) && (
-        <div className="flex items-center justify-between text-xs pt-1 border-t">
+        <div className="flex flex-col gap-1 text-xs pt-1 border-t min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between">
           <span className="text-muted-foreground">
             {s.committedQuantity > 0 && (
               <span className="text-blue-600 font-medium mr-3">Committed: {s.committedQuantity.toLocaleString()}</span>
@@ -280,11 +280,11 @@ export default function Home() {
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">Production Dashboard</h1>
           <p className="text-muted-foreground mt-1 text-sm">Overview of inventory status, production needs, and scheduling.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <Button
             variant={showWhatIf ? "default" : "outline"}
             onClick={() => setShowWhatIf((v) => !v)}
-            className={`${showWhatIf ? "bg-primary" : ""} text-sm`}
+            className={`${showWhatIf ? "bg-primary" : ""} text-sm w-full sm:w-auto`}
             size="sm"
           >
             <FlaskConical className="w-4 h-4 mr-1.5" />
@@ -293,7 +293,7 @@ export default function Home() {
           <Button
             onClick={() => checkStockoutsMutation.mutate()}
             disabled={checkStockoutsMutation.isPending}
-            className="bg-green-600 hover:bg-green-700 whitespace-nowrap text-sm"
+            className="bg-green-600 hover:bg-green-700 whitespace-nowrap text-sm w-full sm:w-auto"
             size="sm"
           >
             {checkStockoutsMutation.isPending ? (
@@ -360,11 +360,12 @@ export default function Home() {
             <CardTitle className="text-lg">Production Needs</CardTitle>
             <p className="text-sm text-muted-foreground mt-1">SKUs requiring production attention, sorted by days to stockout</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:flex sm:items-center">
             {suggestions?.suggestions && suggestions.suggestions.length > 0 && (
               <Button
                 variant="outline"
                 size="sm"
+                className="w-full sm:w-auto"
                 onClick={() => void exportProductionNeedsPdf(
                     suggestions.suggestions,
                     { critical: criticalCount, warning: warningCount, ok: okCount, activeBatches },
@@ -381,7 +382,7 @@ export default function Home() {
                 Export PDF
               </Button>
             )}
-            <Button variant="outline" size="sm" onClick={() => setLocation("/calendar")}>
+            <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setLocation("/calendar")}>
               View Calendar <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>

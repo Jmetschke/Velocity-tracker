@@ -328,7 +328,7 @@ export default function UploadData() {
             </div>
 
             {/* Parsed Items Table */}
-            <div className="overflow-x-auto">
+            <div className="hidden sm:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
@@ -372,6 +372,27 @@ export default function UploadData() {
                 </tbody>
               </table>
             </div>
+            <div className="space-y-2 sm:hidden">
+              {metrcResult.parsedItems.map((item, i) => (
+                <div key={i} className="rounded-lg border p-3 space-y-2">
+                  <div className="font-medium text-sm text-foreground break-words">{item.skuName}</div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <span className="block text-muted-foreground">Available</span>
+                      <span className="tabular-nums font-medium text-primary">{item.available.toLocaleString()}</span>
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">WIP</span>
+                      <span className="tabular-nums text-amber-600">{item.wip > 0 ? item.wip.toLocaleString() : "—"}</span>
+                    </div>
+                    <div>
+                      <span className="block text-muted-foreground">Total</span>
+                      <span className="tabular-nums">{(item.available + item.wip).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
 
             {/* Unmatched warnings */}
             {metrcResult.unmatchedNames.length > 0 && (
@@ -390,7 +411,7 @@ export default function UploadData() {
                       {metrcResult.unmatchedNames.map((name, i) => (
                         <li
                           key={i}
-                          className="text-xs text-amber-700 dark:text-amber-300"
+                          className="break-words text-xs text-amber-700 dark:text-amber-300"
                         >
                           {name}
                         </li>
@@ -408,7 +429,7 @@ export default function UploadData() {
                 </p>
                 <div className="space-y-1">
                   {metrcResult.unmatchedRows.map((row, i) => (
-                    <p key={i} className="text-xs text-muted-foreground">
+                    <p key={i} className="break-words text-xs text-muted-foreground">
                       "{row.item}" (qty: {row.qty}) — {row.reason}
                     </p>
                   ))}
@@ -648,7 +669,7 @@ export default function UploadData() {
                     <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Unmatched QB Products</p>
                     <ul className="mt-2 space-y-1">
                       {qbParseResult.unmatchedRows.map((row, i) => (
-                        <li key={i} className="text-xs text-amber-700 dark:text-amber-300">
+                        <li key={i} className="break-words text-xs text-amber-700 dark:text-amber-300">
                           "{row.name}" — {row.reason}
                         </li>
                       ))}
@@ -735,10 +756,10 @@ export default function UploadData() {
                 {snapshots.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between py-2 border-b last:border-0"
+                    className="flex flex-col gap-2 py-2 border-b last:border-0 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-medium text-foreground sm:truncate">
                         {s.fileName || "Unnamed upload"}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -748,7 +769,7 @@ export default function UploadData() {
                         )}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-xs">
+                    <Badge variant="outline" className="w-fit text-xs">
                       {String(s.fileName ?? "").startsWith("[METRC]")
                         ? "METRC"
                         : "Manual"}
@@ -774,10 +795,10 @@ export default function UploadData() {
                 {salesUploads.map((s) => (
                   <div
                     key={s.id}
-                    className="flex items-center justify-between py-2 border-b last:border-0"
+                    className="flex flex-col gap-2 py-2 border-b last:border-0 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div>
-                      <p className="text-sm font-medium text-foreground">
+                    <div className="min-w-0">
+                      <p className="break-words text-sm font-medium text-foreground sm:truncate">
                         {s.fileName || "Unnamed upload"}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -792,7 +813,7 @@ export default function UploadData() {
                             ? "destructive"
                             : "outline"
                       }
-                      className="text-xs"
+                      className="w-fit text-xs"
                     >
                       {s.status === "completed" && (
                         <CheckCircle className="h-3 w-3 mr-1" />

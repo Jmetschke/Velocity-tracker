@@ -189,41 +189,41 @@ export default function CommittedBatches() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card className="border-blue-200 bg-blue-50/50">
-          <CardContent className="pt-4 pb-4">
+          <CardContent className="px-3 pt-4 pb-4 sm:px-6">
             <div className="flex items-center gap-2 text-blue-700">
               <Clock className="h-4 w-4" />
-              <span className="text-sm font-medium">Planned</span>
+              <span className="text-xs font-medium sm:text-sm">Planned</span>
             </div>
-            <p className="text-2xl font-bold text-blue-800 mt-1">{stats.planned}</p>
+            <p className="text-xl font-bold text-blue-800 mt-1 sm:text-2xl">{stats.planned}</p>
           </CardContent>
         </Card>
         <Card className="border-yellow-200 bg-yellow-50/50">
-          <CardContent className="pt-4 pb-4">
+          <CardContent className="px-3 pt-4 pb-4 sm:px-6">
             <div className="flex items-center gap-2 text-yellow-700">
               <PlayCircle className="h-4 w-4" />
-              <span className="text-sm font-medium">In Progress</span>
+              <span className="text-xs font-medium sm:text-sm">In Progress</span>
             </div>
-            <p className="text-2xl font-bold text-yellow-800 mt-1">{stats.inProgress}</p>
+            <p className="text-xl font-bold text-yellow-800 mt-1 sm:text-2xl">{stats.inProgress}</p>
           </CardContent>
         </Card>
         <Card className="border-green-200 bg-green-50/50">
-          <CardContent className="pt-4 pb-4">
+          <CardContent className="px-3 pt-4 pb-4 sm:px-6">
             <div className="flex items-center gap-2 text-green-700">
               <CheckCircle2 className="h-4 w-4" />
-              <span className="text-sm font-medium">Completed</span>
+              <span className="text-xs font-medium sm:text-sm">Completed</span>
             </div>
-            <p className="text-2xl font-bold text-green-800 mt-1">{stats.completed}</p>
+            <p className="text-xl font-bold text-green-800 mt-1 sm:text-2xl">{stats.completed}</p>
           </CardContent>
         </Card>
         <Card className="border-purple-200 bg-purple-50/50">
-          <CardContent className="pt-4 pb-4">
+          <CardContent className="px-3 pt-4 pb-4 sm:px-6">
             <div className="flex items-center gap-2 text-purple-700">
               <Package className="h-4 w-4" />
-              <span className="text-sm font-medium">Committed Units</span>
+              <span className="text-xs font-medium sm:text-sm">Committed Units</span>
             </div>
-            <p className="text-2xl font-bold text-purple-800 mt-1">{stats.totalUnits.toLocaleString()}</p>
+            <p className="text-xl font-bold text-purple-800 mt-1 sm:text-2xl">{stats.totalUnits.toLocaleString()}</p>
           </CardContent>
         </Card>
       </div>
@@ -311,11 +311,11 @@ export default function CommittedBatches() {
                 />
               </div>
 
-              <div className="flex items-end gap-2">
-                <Button onClick={handleSubmit} disabled={createBatch.isPending}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <Button className="w-full sm:w-auto" onClick={handleSubmit} disabled={createBatch.isPending}>
                   {createBatch.isPending ? "Committing..." : "Commit Batch"}
                 </Button>
-                <Button variant="outline" onClick={resetForm}>
+                <Button variant="outline" className="w-full sm:w-auto" onClick={resetForm}>
                   Cancel
                 </Button>
               </div>
@@ -356,7 +356,7 @@ export default function CommittedBatches() {
             <p className="text-muted-foreground mb-4">
               Click "Commit Batch" to add your planned production runs.
             </p>
-            <Button onClick={() => setShowForm(true)}>
+        <Button className="w-full sm:w-auto" onClick={() => setShowForm(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Commit Your First Batch
             </Button>
@@ -402,24 +402,24 @@ export default function CommittedBatches() {
                           key={batch.id}
                           className="p-3 rounded-lg border bg-background hover:bg-accent/30 transition-colors space-y-2"
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 min-w-0">
                               <Badge variant="outline" className={`${cfg.color} shrink-0`}>
                                 <StatusIcon className="h-3 w-3 mr-1" />
                                 {cfg.label}
                               </Badge>
                               <span className="font-medium truncate">{batch.skuName}</span>
                             </div>
-                            <span className="font-mono text-sm font-medium shrink-0 ml-2">
+                            <span className="font-mono text-sm font-medium shrink-0 sm:ml-2">
                               {batch.quantity.toLocaleString()}
                             </span>
                           </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground min-w-0">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground min-w-0">
                               {batch.categoryName && <span>({batch.categoryName})</span>}
-                              {batch.notes && <span className="truncate max-w-[180px]">{batch.notes}</span>}
+                              {batch.notes && <span className="max-w-full break-words sm:max-w-[180px] sm:truncate">{batch.notes}</span>}
                             </div>
-                            <div className="flex items-center gap-0.5 shrink-0">
+                            <div className="flex items-center justify-end gap-0.5 shrink-0">
                               {batch.status === "planned" && (
                                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => updateBatch.mutate({ id: batch.id, status: "in_progress" })} title="Start production">
                                   <PlayCircle className="h-4 w-4 text-yellow-600" />
