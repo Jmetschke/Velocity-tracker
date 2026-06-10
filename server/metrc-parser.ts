@@ -21,7 +21,6 @@ export interface MetrcParsedItem {
   available: number;
   wip: number;
   tags: string[];
-  itemNames: string[];
 }
 
 export interface MetrcParseResult {
@@ -150,7 +149,7 @@ export async function parseMetrcExport(
 
   const skuTotals = new Map<
     string,
-    { available: number; wip: number; tags: string[]; itemNames: Set<string> }
+    { available: number; wip: number; tags: string[] }
   >();
   const unmatchedRows: MetrcParseResult["unmatchedRows"] = [];
   let excludedRows = 0;
@@ -195,12 +194,10 @@ export async function parseMetrcExport(
       available: 0,
       wip: 0,
       tags: [],
-      itemNames: new Set<string>(),
     };
     if (isWip) existing.wip += qty;
     else existing.available += qty;
     existing.tags.push(tag);
-    existing.itemNames.add(item);
     skuTotals.set(skuName, existing);
   }
 
@@ -210,7 +207,6 @@ export async function parseMetrcExport(
       available: Math.round(data.available),
       wip: Math.round(data.wip),
       tags: data.tags,
-      itemNames: Array.from(data.itemNames),
     })
   );
 

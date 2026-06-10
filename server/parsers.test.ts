@@ -1,22 +1,12 @@
 import { describe, expect, it } from "vitest";
-import {
-  parseInventoryReport,
-  parseSalesReport,
-  findBestSkuMatch,
-} from "./parsers";
+import { parseInventoryReport, parseSalesReport, findBestSkuMatch } from "./parsers";
 import { buildExcelBuffer } from "./test-helpers";
 
 // ─── Helper: Build a mock inventory xlsx buffer ───────────────────────
 
 async function buildInventoryBuffer(): Promise<Buffer> {
   return buildExcelBuffer("Sheet1", [
-    [
-      null,
-      "Qty in Inventory",
-      "Qty on Hold for COA",
-      "Total",
-      "Trigger Point to Produce",
-    ],
+    [null, "Qty in Inventory", "Qty on Hold for COA", "Total", "Trigger Point to Produce"],
     ["Hijnx", null, null, null, null],
     ["Alpha Chunk", null, null, null, null],
     ["2-pack", 11640, null, 11640, 2400],
@@ -51,7 +41,7 @@ describe("parseInventoryReport", () => {
 
     expect(items.length).toBe(16);
 
-    const names = items.map(i => i.fullName);
+    const names = items.map((i) => i.fullName);
     expect(names).toContain("Alpha Chunk - 2pk");
     expect(names).toContain("Alpha Chunk - 1pk");
     expect(names).toContain("Rex Chunk - 2pk");
@@ -70,13 +60,13 @@ describe("parseInventoryReport", () => {
     const buffer = await buildInventoryBuffer();
     const items = await parseInventoryReport(buffer);
 
-    const alphaChunk2pk = items.find(i => i.fullName === "Alpha Chunk - 2pk");
+    const alphaChunk2pk = items.find((i) => i.fullName === "Alpha Chunk - 2pk");
     expect(alphaChunk2pk).toBeDefined();
     expect(alphaChunk2pk!.qtyInInventory).toBe(11640);
     expect(alphaChunk2pk!.qtyOnHold).toBe(0);
     expect(alphaChunk2pk!.totalQty).toBe(11640);
 
-    const sleepChunk2pk = items.find(i => i.fullName === "Sleep Chunk - 2pk");
+    const sleepChunk2pk = items.find((i) => i.fullName === "Sleep Chunk - 2pk");
     expect(sleepChunk2pk).toBeDefined();
     expect(sleepChunk2pk!.qtyInInventory).toBe(926);
     expect(sleepChunk2pk!.qtyOnHold).toBe(7123);
@@ -86,7 +76,7 @@ describe("parseInventoryReport", () => {
   it("handles Whoopie His -> Whoopie Hi name correction", async () => {
     const buffer = await buildInventoryBuffer();
     const items = await parseInventoryReport(buffer);
-    const whoopie = items.find(i => i.fullName === "Whoopie Hi");
+    const whoopie = items.find((i) => i.fullName === "Whoopie Hi");
     expect(whoopie).toBeDefined();
     expect(whoopie!.qtyInInventory).toBe(823);
   });
@@ -95,13 +85,11 @@ describe("parseInventoryReport", () => {
     const buffer = await buildInventoryBuffer();
     const items = await parseInventoryReport(buffer);
 
-    const grapeCrush = items.find(i => i.fullName === "Grape Crush");
+    const grapeCrush = items.find((i) => i.fullName === "Grape Crush");
     expect(grapeCrush).toBeDefined();
     expect(grapeCrush!.qtyInInventory).toBe(1436);
 
-    const watermelonLychee = items.find(
-      i => i.fullName === "Watermelon Lychee"
-    );
+    const watermelonLychee = items.find((i) => i.fullName === "Watermelon Lychee");
     expect(watermelonLychee).toBeDefined();
     expect(watermelonLychee!.qtyInInventory).toBe(1535);
   });
@@ -149,12 +137,6 @@ describe("findBestSkuMatch", () => {
     expect(findBestSkuMatch("MiNi's Chunks - 10pk", dbSkus)?.id).toBe(9);
   });
 
-  it("matches names copied from spreadsheets with unicode spacing and dashes", () => {
-    expect(
-      findBestSkuMatch("Alpha Chunk\u00a0\u2013\u00a02pk", dbSkus)?.id
-    ).toBe(1);
-  });
-
   it("returns null for non-matching names", () => {
     expect(findBestSkuMatch("Nonexistent Product", dbSkus)).toBeNull();
   });
@@ -169,68 +151,12 @@ describe("parseSalesReport", () => {
       ["Sales by Product/Service Summary"],
       ["All Dates"],
       [null],
-      [
-        null,
-        "Jan 2026",
-        null,
-        null,
-        null,
-        "Feb 2026",
-        null,
-        null,
-        null,
-        "Total",
-        null,
-        null,
-        null,
-      ],
-      [
-        null,
-        "Quantity",
-        "Amount",
-        "% of Sales",
-        "Avg Price",
-        "Quantity",
-        "Amount",
-        "% of Sales",
-        "Avg Price",
-        "Quantity",
-        "Amount",
-        "% of Sales",
-        "Avg Price",
-      ],
+      [null, "Jan 2026", null, null, null, "Feb 2026", null, null, null, "Total", null, null, null],
+      [null, "Quantity", "Amount", "% of Sales", "Avg Price", "Quantity", "Amount", "% of Sales", "Avg Price", "Quantity", "Amount", "% of Sales", "Avg Price"],
       ["Hijnx Edibles"],
-      [
-        "   Alpha Chunk - 2pk",
-        "3,100.00",
-        "$14,725.00",
-        "40%",
-        "4.75",
-        "2,800.00",
-        "$13,300.00",
-        "38%",
-        "4.75",
-        "5,900.00",
-        "$28,025.00",
-        "39%",
-        "4.75",
-      ],
+      ["   Alpha Chunk - 2pk", "3,100.00", "$14,725.00", "40%", "4.75", "2,800.00", "$13,300.00", "38%", "4.75", "5,900.00", "$28,025.00", "39%", "4.75"],
       ["   Alpha Chunk - 2pk (SAMPLE)"],
-      [
-        "   Chill Chunk - 1pk",
-        "1,500.00",
-        "$5,250.00",
-        "15%",
-        "3.50",
-        "1,200.00",
-        "$4,200.00",
-        "12%",
-        "3.50",
-        "2,700.00",
-        "$9,450.00",
-        "13%",
-        "3.50",
-      ],
+      ["   Chill Chunk - 1pk", "1,500.00", "$5,250.00", "15%", "3.50", "1,200.00", "$4,200.00", "12%", "3.50", "2,700.00", "$9,450.00", "13%", "3.50"],
     ]);
   }
 

@@ -27,9 +27,7 @@ export interface ParsedInventoryItem {
   triggerPoint: number;
 }
 
-export async function parseInventoryReport(
-  buffer: Buffer
-): Promise<ParsedInventoryItem[]> {
+export async function parseInventoryReport(buffer: Buffer): Promise<ParsedInventoryItem[]> {
   const rows = await readSheetAsArrays(buffer);
   const items: ParsedInventoryItem[] = [];
 
@@ -44,10 +42,7 @@ export async function parseInventoryReport(
     const rawName = String(row[0]).trim();
     const lowerName = rawName.toLowerCase();
 
-    if (brandHeaders.includes(lowerName)) {
-      currentProductContext = "";
-      continue;
-    }
+    if (brandHeaders.includes(lowerName)) { currentProductContext = ""; continue; }
 
     const hasQtyData = row[1] !== null && row[1] !== undefined;
 
@@ -55,10 +50,7 @@ export async function parseInventoryReport(
       currentProductContext = rawName;
       continue;
     }
-    if (!hasQtyData) {
-      currentProductContext = "";
-      continue;
-    }
+    if (!hasQtyData) { currentProductContext = ""; continue; }
 
     let fullName = rawName;
     const standalonePackMatch = rawName.match(/^(.+?)\s+(\d+)-?pack$/i);
@@ -81,8 +73,7 @@ export async function parseInventoryReport(
     const trigger = parseFloat(String(row[4] || 0)) || 0;
 
     items.push({
-      rawName,
-      fullName,
+      rawName, fullName,
       qtyInInventory: Math.round(qtyInv),
       qtyOnHold: Math.round(qtyHold),
       totalQty: Math.round(total),
@@ -156,36 +147,24 @@ export async function parseSalesReport(buffer: Buffer): Promise<{
     for (const month of months) {
       const qty = parseNumericString(row[month.qtyCol]);
       const amt = parseNumericString(row[month.amtCol]);
-      if (qty > 0)
-        monthlyData.push({ month: month.name, quantity: qty, amount: amt });
+      if (qty > 0) monthlyData.push({ month: month.name, quantity: qty, amount: amt });
     }
 
     if (monthlyData.length === 0) continue;
 
-    const totalQty =
-      totalQtyCol >= 0 ? parseNumericString(row[totalQtyCol]) : 0;
-    const totalAmt =
-      totalAmtCol >= 0 ? parseNumericString(row[totalAmtCol]) : 0;
+    const totalQty = totalQtyCol >= 0 ? parseNumericString(row[totalQtyCol]) : 0;
+    const totalAmt = totalAmtCol >= 0 ? parseNumericString(row[totalAmtCol]) : 0;
 
-    items.push({
-      skuName: rawName,
-      monthlyData,
-      totalQuantity: totalQty,
-      totalAmount: totalAmt,
-    });
+    items.push({ skuName: rawName, monthlyData, totalQuantity: totalQty, totalAmount: totalAmt });
   }
 
   const csvLines: string[] = [];
-  csvLines.push(
-    "SKU Name," + months.map(m => m.name + " Qty").join(",") + ",Total Qty"
-  );
+  csvLines.push("SKU Name," + months.map((m) => m.name + " Qty").join(",") + ",Total Qty");
   for (const item of items) {
     const qtyByMonth: Record<string, number> = {};
     for (const md of item.monthlyData) qtyByMonth[md.month] = md.quantity;
-    const monthQtys = months.map(m => qtyByMonth[m.name] || 0);
-    csvLines.push(
-      `${item.skuName},${monthQtys.join(",")},${item.totalQuantity}`
-    );
+    const monthQtys = months.map((m) => qtyByMonth[m.name] || 0);
+    csvLines.push(`${item.skuName},${monthQtys.join(",")},${item.totalQuantity}`);
   }
 
   return { items, csvForAI: csvLines.join("\n") };
@@ -194,11 +173,7 @@ export async function parseSalesReport(buffer: Buffer): Promise<{
 // ─── SKU Name Matching ────────────────────────────────────────────────
 
 function normalizeName(name: string): string {
-  return name
-    .trim()
-    .toLowerCase()
-    .replace(/[\u2010-\u2015]/g, "-")
-    .replace(/\u00a0/g, " ")
+  return name.trim().toLowerCase()
     .replace(/\s*-\s*/g, " - ")
     .replace(/(\d+)\s*-?\s*pack/g, "$1pk")
     .replace(/\s+/g, " ");
@@ -219,20 +194,15 @@ export function findBestSkuMatch(
     if (normalized.includes(dbNorm) || dbNorm.includes(normalized)) return sku;
   }
 
-  const parsedWords = normalized.split(/[\s-]+/).filter(w => w.length > 1);
+  const parsedWords = normalized.split(/[\s-]+/).filter((w) => w.length > 1);
   let bestMatch: { id: number; name: string } | null = null;
   let bestScore = 0;
 
   for (const sku of dbSkus) {
-    const dbWords = normalizeName(sku.name)
-      .split(/[\s-]+/)
-      .filter(w => w.length > 1);
-    const overlap = parsedWords.filter(w => dbWords.includes(w)).length;
+    const dbWords = normalizeName(sku.name).split(/[\s-]+/).filter((w) => w.length > 1);
+    const overlap = parsedWords.filter((w) => dbWords.includes(w)).length;
     const score = overlap / Math.max(parsedWords.length, dbWords.length);
-    if (score > bestScore && score >= 0.5) {
-      bestScore = score;
-      bestMatch = sku;
-    }
+    if (score > bestScore && score >= 0.5) { bestScore = score; bestMatch = sku; }
   }
 
   return bestMatch;
