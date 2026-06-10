@@ -13,6 +13,23 @@ import {
 const MAX_FILE = 10_000_000;
 const FILE_TOO_LARGE = "File too large (max ~7.5 MB)";
 
+function normalizeSkuName(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/\s*-\s*/g, " - ")
+    .replace(/(\d+)\s*-?\s*pack/g, "$1pk")
+    .replace(/\s+/g, " ");
+}
+
+function hasExactSkuName(
+  skuName: string,
+  skus: Array<{ id: number; name: string }>
+) {
+  const normalized = normalizeSkuName(skuName);
+  return skus.some(sku => normalizeSkuName(sku.name) === normalized);
+}
+
 export const inventoryRouter = router({
   latestSnapshot: protectedProcedure.query(async () => {
     const snapshot = await db.getLatestSnapshot();
@@ -125,7 +142,7 @@ export const inventoryRouter = router({
       await ensureDefaultSkus(result.items.map(item => item.skuName));
       let allSkus = await db.getAllSkus();
       const newSkuNames = result.items
-        .filter(item => !findBestSkuMatch(item.skuName, allSkus))
+        .filter(item => !hasExactSkuName(item.skuName, allSkus))
         .map(item => item.skuName);
 
       if (newSkuNames.length > 0 && !input.allowNewSkus) {
