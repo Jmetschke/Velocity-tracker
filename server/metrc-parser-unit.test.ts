@@ -62,6 +62,9 @@ describe("METRC Parser (synthetic data)", () => {
     expect(result.items[0].skuName).toBe("Alpha Chunk - 2pk");
     expect(result.items[0].available).toBe(500);
     expect(result.items[0].wip).toBe(0);
+    expect(result.items[0].itemNames).toContain(
+      "Hijnx Gummy RSO 100mg Space Chunks"
+    );
   });
 
   // ─── Item-to-SKU Mapping ────────────────────────────────────────────

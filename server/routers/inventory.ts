@@ -2,13 +2,9 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { z } from "zod";
 import * as db from "../db";
 import { parseInventoryReport, findBestSkuMatch } from "../parsers";
-import { parseMetrcExport } from "../metrc-parser";
+import { parseMetrcExport, type MetrcParsedItem } from "../metrc-parser";
 import { validateInventory, validateMetrc } from "../data-validation";
-import {
-  ensureDefaultSkus,
-  ensureInventorySkus,
-  seedDefaultCatalog,
-} from "../default-catalog";
+import { ensureDefaultSkus, seedDefaultCatalog } from "../default-catalog";
 
 const MAX_FILE = 10_000_000;
 const FILE_TOO_LARGE = "File too large (max ~7.5 MB)";
@@ -17,17 +13,40 @@ function normalizeSkuName(name: string) {
   return name
     .trim()
     .toLowerCase()
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/\u00a0/g, " ")
     .replace(/\s*-\s*/g, " - ")
     .replace(/(\d+)\s*-?\s*pack/g, "$1pk")
     .replace(/\s+/g, " ");
 }
 
-function hasExactSkuName(
-  skuName: string,
-  skus: Array<{ id: number; name: string }>
+function findExactSkuMatch(
+  parsedName: string,
+  dbSkus: Array<{ id: number; name: string }>
 ) {
-  const normalized = normalizeSkuName(skuName);
-  return skus.some(sku => normalizeSkuName(sku.name) === normalized);
+  const normalized = normalizeSkuName(parsedName);
+  return dbSkus.find(sku => normalizeSkuName(sku.name) === normalized) ?? null;
+}
+
+function findMetrcSkuMatch(
+  parsed: MetrcParsedItem,
+  dbSkus: Array<{ id: number; name: string }>
+) {
+  for (const itemName of parsed.itemNames) {
+    const exactItemNameMatch = findExactSkuMatch(itemName, dbSkus);
+    if (exactItemNameMatch) return exactItemNameMatch;
+  }
+
+  const exactSkuNameMatch = findExactSkuMatch(parsed.skuName, dbSkus);
+  if (exactSkuNameMatch) return exactSkuNameMatch;
+
+  return (
+    findBestSkuMatch(parsed.skuName, dbSkus) ??
+    parsed.itemNames
+      .map(itemName => findBestSkuMatch(itemName, dbSkus))
+      .find((match): match is { id: number; name: string } => Boolean(match)) ??
+    null
+  );
 }
 
 export const inventoryRouter = router({
@@ -117,7 +136,6 @@ export const inventoryRouter = router({
       z.object({
         fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE),
         fileName: z.string(),
-        allowNewSkus: z.boolean().default(false),
       })
     )
     .mutation(async ({ input, ctx }) => {
@@ -140,36 +158,7 @@ export const inventoryRouter = router({
       }
 
       await ensureDefaultSkus(result.items.map(item => item.skuName));
-      let allSkus = await db.getAllSkus();
-      const newSkuNames = result.items
-        .filter(item => !hasExactSkuName(item.skuName, allSkus))
-        .map(item => item.skuName);
-
-      if (newSkuNames.length > 0 && !input.allowNewSkus) {
-        return {
-          status: "needs_confirmation" as const,
-          validation,
-          snapshotId: null,
-          matchedItems: result.items.length - newSkuNames.length,
-          totalRows: result.totalRows,
-          includedRows: result.includedRows,
-          excludedRows: result.excludedRows,
-          unmatchedNames: [],
-          unmatchedRows: result.unmatchedRows,
-          parsedItems: result.items.map(i => ({
-            skuName: i.skuName,
-            available: i.available,
-            wip: i.wip,
-          })),
-          newSkuNames,
-        };
-      }
-
-      if (newSkuNames.length > 0) {
-        await ensureInventorySkus(newSkuNames);
-        allSkus = await db.getAllSkus();
-      }
-
+      const allSkus = await db.getAllSkus();
       const snapshotId = await db.createInventorySnapshot({
         uploadedBy: ctx.user?.id ?? null,
         fileName: `[METRC] ${input.fileName}`,
@@ -185,7 +174,7 @@ export const inventoryRouter = router({
       const unmatchedNames: string[] = [];
 
       for (const parsed of result.items) {
-        const match = findBestSkuMatch(parsed.skuName, allSkus);
+        const match = findMetrcSkuMatch(parsed, allSkus);
         if (match) {
           items.push({
             skuId: match.id,
@@ -195,27 +184,6 @@ export const inventoryRouter = router({
           });
         } else {
           unmatchedNames.push(parsed.skuName);
-        }
-      }
-
-      if (unmatchedNames.length > 0) {
-        await ensureInventorySkus(unmatchedNames);
-        allSkus = await db.getAllSkus();
-        for (let i = unmatchedNames.length - 1; i >= 0; i--) {
-          const parsed = result.items.find(
-            item => item.skuName === unmatchedNames[i]
-          );
-          const match = parsed
-            ? findBestSkuMatch(parsed.skuName, allSkus)
-            : null;
-          if (!parsed || !match) continue;
-          items.push({
-            skuId: match.id,
-            qtyInInventory: parsed.available,
-            qtyOnHold: parsed.wip,
-            totalQty: parsed.available + parsed.wip,
-          });
-          unmatchedNames.splice(i, 1);
         }
       }
 
@@ -239,7 +207,6 @@ export const inventoryRouter = router({
           available: i.available,
           wip: i.wip,
         })),
-        newSkuNames,
         validation,
       };
     }),

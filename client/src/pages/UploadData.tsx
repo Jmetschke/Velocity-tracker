@@ -3,16 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Upload,
   FileSpreadsheet,
   Loader2,
@@ -66,8 +56,7 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 interface MetrcResult {
-  status?: "completed" | "needs_confirmation";
-  snapshotId: number | null;
+  snapshotId: number;
   matchedItems: number;
   totalRows: number;
   includedRows: number;
@@ -75,7 +64,6 @@ interface MetrcResult {
   unmatchedNames: string[];
   unmatchedRows: Array<{ item: string; qty: number; reason: string }>;
   parsedItems: Array<{ skuName: string; available: number; wip: number }>;
-  newSkuNames?: string[];
 }
 
 export default function UploadData() {
@@ -84,11 +72,6 @@ export default function UploadData() {
   // ─── METRC Upload ────────────────────────────────────────────────
   const [metrcFile, setMetrcFile] = useState<File | null>(null);
   const [metrcResult, setMetrcResult] = useState<MetrcResult | null>(null);
-  const [pendingMetrcUpload, setPendingMetrcUpload] = useState<{
-    fileBase64: string;
-    fileName: string;
-    newSkuNames: string[];
-  } | null>(null);
   const metrcRef = useRef<HTMLInputElement>(null);
 
   const [metrcValidation, setMetrcValidation] =
@@ -101,24 +84,11 @@ export default function UploadData() {
   );
 
   const metrcUpload = trpc.inventory.uploadMetrc.useMutation({
-    onSuccess: (data, variables) => {
+    onSuccess: data => {
       setMetrcValidation(data.validation ?? null);
       if (data.validation && !data.validation.valid) {
         toast.error("METRC upload blocked — validation errors found");
         setMetrcFile(null);
-        return;
-      }
-      if (data.status === "needs_confirmation") {
-        const newSkuNames = data.newSkuNames ?? [];
-        setPendingMetrcUpload({
-          fileBase64: variables.fileBase64,
-          fileName: variables.fileName,
-          newSkuNames,
-        });
-        setMetrcResult(data as MetrcResult);
-        toast.info(
-          `METRC found ${newSkuNames.length} new SKU${newSkuNames.length === 1 ? "" : "s"} to review`
-        );
         return;
       }
       utils.inventory.latestSnapshot.invalidate();
@@ -127,14 +97,9 @@ export default function UploadData() {
       utils.production.suggestions.invalidate();
       setMetrcResult(data as MetrcResult);
       const unmatchedCount = data.unmatchedNames?.length ?? 0;
-      const newSkuCount = data.newSkuNames?.length ?? 0;
       if (unmatchedCount > 0) {
         toast.success(
           `METRC parsed: ${data.matchedItems} SKUs matched, ${unmatchedCount} unmatched`
-        );
-      } else if (newSkuCount > 0) {
-        toast.success(
-          `METRC parsed: ${data.matchedItems} SKUs matched, ${newSkuCount} new SKU${newSkuCount === 1 ? "" : "s"} added`
         );
       } else {
         toast.success(
@@ -235,16 +200,6 @@ export default function UploadData() {
     metrcUpload.mutate({ fileBase64: base64, fileName: metrcFile.name });
   };
 
-  const confirmNewMetrcSkus = () => {
-    if (!pendingMetrcUpload) return;
-    metrcUpload.mutate({
-      fileBase64: pendingMetrcUpload.fileBase64,
-      fileName: pendingMetrcUpload.fileName,
-      allowNewSkus: true,
-    });
-    setPendingMetrcUpload(null);
-  };
-
   const handleInventoryUpload = async () => {
     if (!inventoryFile) return;
     const base64 = await fileToBase64(inventoryFile);
@@ -268,53 +223,6 @@ export default function UploadData() {
 
   return (
     <div className="space-y-6">
-      <AlertDialog
-        open={Boolean(pendingMetrcUpload)}
-        onOpenChange={open => {
-          if (!open && !metrcUpload.isPending) setPendingMetrcUpload(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Add new SKUs from METRC?</AlertDialogTitle>
-            <AlertDialogDescription>
-              METRC found item names that are not currently in your SKU list.
-              Approving will create them as active SKUs and finish the inventory
-              upload.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="max-h-56 overflow-y-auto rounded-md border bg-muted/30 p-3">
-            <ul className="space-y-2 text-sm">
-              {pendingMetrcUpload?.newSkuNames.map(name => (
-                <li
-                  key={name}
-                  className="break-words font-medium text-foreground"
-                >
-                  {name}
-                </li>
-              ))}
-            </ul>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel
-              onClick={() => {
-                setPendingMetrcUpload(null);
-                setMetrcFile(null);
-                toast.info("METRC upload cancelled. No new SKUs were added.");
-              }}
-            >
-              No, cancel upload
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmNewMetrcSkus}
-              disabled={metrcUpload.isPending}
-            >
-              Yes, add SKUs
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       <div>
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
           Upload Data
