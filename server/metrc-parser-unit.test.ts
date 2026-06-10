@@ -9,8 +9,14 @@ import { buildExcelBuffer } from "./test-helpers";
 // ─── Helpers ────────────────────────────────────────────────────────────
 
 const HEADERS = [
-  "Tag", "Item", "Category", "Location", "Quantity",
-  "Unit Of Measure", "Lab Test Status", "Production Batch Number",
+  "Tag",
+  "Item",
+  "Category",
+  "Location",
+  "Quantity",
+  "Unit Of Measure",
+  "Lab Test Status",
+  "Production Batch Number",
   "Source Processing Job(s)",
 ];
 
@@ -31,7 +37,7 @@ function row(overrides: Partial<Record<string, any>> = {}): any[] {
     "Source Processing Job(s)": "",
   };
   const merged = { ...defaults, ...overrides };
-  return HEADERS.map((h) => merged[h]);
+  return HEADERS.map(h => merged[h]);
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────
@@ -62,17 +68,49 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("maps all Chunk variants correctly", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "T1", Item: "Hijnx Gummy RSO 100mg Space Chunks", Quantity: 100 }),
-      row({ Tag: "T2", Item: "Hijnx Gummy RSO 50mg Space Chunk Gummy", Quantity: 200 }),
-      row({ Tag: "T3", Item: "Hijnx Gummy RSO 100mg / 100mg Space Chunks", Quantity: 300 }),
-      row({ Tag: "T4", Item: "Hijnx Gummy RSO 50mg/50mg Space Chunk Gummy", Quantity: 400 }),
-      row({ Tag: "T5", Item: "Hijnx Gummy RSO CBN 100mg/100mg Sleep Space Chunk Gummies", Quantity: 500 }),
-      row({ Tag: "T6", Item: "Hijnx Gummy RSO CBN 50mg/50mg Sleep Space Chunk Gummy", Quantity: 600 }),
-      row({ Tag: "T7", Item: "Hijnx Gummy RSO Rex OG 100mg Rex Space Chunk Gummies", Quantity: 700 }),
-      row({ Tag: "T8", Item: "Hijnx Gummy RSO Zuul OG 100mg Zuul Space Chunk Gummies", Quantity: 800 }),
+      row({
+        Tag: "T1",
+        Item: "Hijnx Gummy RSO 100mg Space Chunks",
+        Quantity: 100,
+      }),
+      row({
+        Tag: "T2",
+        Item: "Hijnx Gummy RSO 50mg Space Chunk Gummy",
+        Quantity: 200,
+      }),
+      row({
+        Tag: "T3",
+        Item: "Hijnx Gummy RSO 100mg / 100mg Space Chunks",
+        Quantity: 300,
+      }),
+      row({
+        Tag: "T4",
+        Item: "Hijnx Gummy RSO 50mg/50mg Space Chunk Gummy",
+        Quantity: 400,
+      }),
+      row({
+        Tag: "T5",
+        Item: "Hijnx Gummy RSO CBN 100mg/100mg Sleep Space Chunk Gummies",
+        Quantity: 500,
+      }),
+      row({
+        Tag: "T6",
+        Item: "Hijnx Gummy RSO CBN 50mg/50mg Sleep Space Chunk Gummy",
+        Quantity: 600,
+      }),
+      row({
+        Tag: "T7",
+        Item: "Hijnx Gummy RSO Rex OG 100mg Rex Space Chunk Gummies",
+        Quantity: 700,
+      }),
+      row({
+        Tag: "T8",
+        Item: "Hijnx Gummy RSO Zuul OG 100mg Zuul Space Chunk Gummies",
+        Quantity: 800,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
-    const nameMap = new Map(result.items.map((i) => [i.skuName, i.available]));
+    const nameMap = new Map(result.items.map(i => [i.skuName, i.available]));
 
     expect(nameMap.get("Alpha Chunk - 2pk")).toBe(100);
     expect(nameMap.get("Alpha Chunk - 1pk")).toBe(200);
@@ -86,11 +124,19 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("maps MiNi's and Sugar Free MiNi's correctly", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "T1", Item: "Hijnx Gummy RSO 100mg Mini Space Chunk Gummies", Quantity: 150 }),
-      row({ Tag: "T2", Item: "Hijnx Gummy RSO Sugar Free 100mg Mini Sugar Free Space Chunk Gummies", Quantity: 75 }),
+      row({
+        Tag: "T1",
+        Item: "Hijnx Gummy RSO 100mg Mini Space Chunk Gummies",
+        Quantity: 150,
+      }),
+      row({
+        Tag: "T2",
+        Item: "Hijnx Gummy RSO Sugar Free 100mg Mini Sugar Free Space Chunk Gummies",
+        Quantity: 75,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
-    const nameMap = new Map(result.items.map((i) => [i.skuName, i.available]));
+    const nameMap = new Map(result.items.map(i => [i.skuName, i.available]));
 
     expect(nameMap.get("MiNi's Chunks - 10pk")).toBe(150);
     expect(nameMap.get("Sugar Free MiNi's - 10pk")).toBe(75);
@@ -98,11 +144,19 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("maps Whoopie Hi and Micro Dots correctly", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "T1", Item: "Hijnx Whoopie RSO 100mg Whoopie Hi Cookie", Quantity: 200 }),
-      row({ Tag: "T2", Item: "Hijnx Micro Dots 50mg Purple Raz - Edible", Quantity: 300 }),
+      row({
+        Tag: "T1",
+        Item: "Hijnx Whoopie RSO 100mg Whoopie Hi Cookie",
+        Quantity: 200,
+      }),
+      row({
+        Tag: "T2",
+        Item: "Hijnx Micro Dots 50mg Purple Raz - Edible",
+        Quantity: 300,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
-    const nameMap = new Map(result.items.map((i) => [i.skuName, i.available]));
+    const nameMap = new Map(result.items.map(i => [i.skuName, i.available]));
 
     expect(nameMap.get("Whoopie Hi")).toBe(200);
     expect(nameMap.get("Micro Dots")).toBe(300);
@@ -110,13 +164,29 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("maps Snackbar Vape flavors correctly", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "T1", Item: "Snackbar Vape Pen 1g - Grape Crush", Quantity: 100 }),
-      row({ Tag: "T2", Item: "Snackbar Vape Pen 1g - Lemon Yuzu", Quantity: 200 }),
-      row({ Tag: "T3", Item: "Snackbar Vape Pen 1g - Magic Mango", Quantity: 300 }),
-      row({ Tag: "T4", Item: "Snackbar Vape Pen 1g - Watermelon Lychee", Quantity: 400 }),
+      row({
+        Tag: "T1",
+        Item: "Snackbar Vape Pen 1g - Grape Crush",
+        Quantity: 100,
+      }),
+      row({
+        Tag: "T2",
+        Item: "Snackbar Vape Pen 1g - Lemon Yuzu",
+        Quantity: 200,
+      }),
+      row({
+        Tag: "T3",
+        Item: "Snackbar Vape Pen 1g - Magic Mango",
+        Quantity: 300,
+      }),
+      row({
+        Tag: "T4",
+        Item: "Snackbar Vape Pen 1g - Watermelon Lychee",
+        Quantity: 400,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
-    const nameMap = new Map(result.items.map((i) => [i.skuName, i.available]));
+    const nameMap = new Map(result.items.map(i => [i.skuName, i.available]));
 
     expect(nameMap.get("Snackbar Vape - Grape Crush 1g")).toBe(100);
     expect(nameMap.get("Snackbar Vape - Lemon Yuzu 1g")).toBe(200);
@@ -126,29 +196,59 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("maps the current 2g Snackbar and sampler METRC item names", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "T1", Item: "Snackbar Vape Pen 2g - Strawberry Dragonfruit", Quantity: 174 }),
-      row({ Tag: "T2", Item: "Snackbar Vape Pen 2g - Peach Passion Fruit", Quantity: 242 }),
-      row({ Tag: "T3", Item: "Snackbar Vape Pen 2g - Cherry Pomegranate Lemon", Quantity: 266 }),
-      row({ Tag: "T4", Item: "Hijnx Edible: Sampler Medley Bag", Quantity: 11198 }),
+      row({
+        Tag: "T1",
+        Item: "Snackbar Vape Pen 2g - Strawberry Dragonfruit",
+        Quantity: 174,
+      }),
+      row({
+        Tag: "T2",
+        Item: "Snackbar Vape Pen 2g - Peach Passion Fruit",
+        Quantity: 242,
+      }),
+      row({
+        Tag: "T3",
+        Item: "Snackbar Vape Pen 2g - Cherry Pomegranate Lemon",
+        Quantity: 266,
+      }),
+      row({
+        Tag: "T4",
+        Item: "Hijnx Edible: Sampler Medley Bag",
+        Quantity: 11198,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
-    const nameMap = new Map(result.items.map((i) => [i.skuName, i.available]));
+    const nameMap = new Map(result.items.map(i => [i.skuName, i.available]));
 
     expect(result.unmatchedRows).toHaveLength(0);
     expect(nameMap.get("Snackbar Vape - Strawberry Dragonfruit 2g")).toBe(174);
     expect(nameMap.get("Snackbar Vape - Peach Passion Fruit 2g")).toBe(242);
-    expect(nameMap.get("Snackbar Vape - Cherry Pomegranate Lemon 2g")).toBe(266);
+    expect(nameMap.get("Snackbar Vape - Cherry Pomegranate Lemon 2g")).toBe(
+      266
+    );
     expect(nameMap.get("Hijnx Sampler Medley Bag")).toBe(11198);
   });
 
   it("maps Shooter SKUs correctly", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "T1", Item: "Hijnx Beverage: Triple Citrus RSO Shooter - 2oz", Quantity: 50 }),
-      row({ Tag: "T2", Item: "Hijnx Beverage: Watermelon RSO Shooter - 2oz", Quantity: 60 }),
-      row({ Tag: "T3", Item: "Hijnx Beverage: Blue Razz RSO Shooter - 2oz", Quantity: 70 }),
+      row({
+        Tag: "T1",
+        Item: "Hijnx Beverage: Triple Citrus RSO Shooter - 2oz",
+        Quantity: 50,
+      }),
+      row({
+        Tag: "T2",
+        Item: "Hijnx Beverage: Watermelon RSO Shooter - 2oz",
+        Quantity: 60,
+      }),
+      row({
+        Tag: "T3",
+        Item: "Hijnx Beverage: Blue Razz RSO Shooter - 2oz",
+        Quantity: 70,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
-    const nameMap = new Map(result.items.map((i) => [i.skuName, i.available]));
+    const nameMap = new Map(result.items.map(i => [i.skuName, i.available]));
 
     expect(nameMap.get("Hijnx Shooter - Triple Citrus 2oz")).toBe(50);
     expect(nameMap.get("Hijnx Shooter - Watermelon 2oz")).toBe(60);
@@ -159,9 +259,21 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("sums quantities across multiple tags of the same SKU", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "TAG001", Item: "Hijnx Gummy RSO 100mg Space Chunks", Quantity: 100 }),
-      row({ Tag: "TAG002", Item: "Hijnx Gummy RSO 100mg Space Chunks", Quantity: 250 }),
-      row({ Tag: "TAG003", Item: "Hijnx Gummy RSO 100mg Space Chunks", Quantity: 150 }),
+      row({
+        Tag: "TAG001",
+        Item: "Hijnx Gummy RSO 100mg Space Chunks",
+        Quantity: 100,
+      }),
+      row({
+        Tag: "TAG002",
+        Item: "Hijnx Gummy RSO 100mg Space Chunks",
+        Quantity: 250,
+      }),
+      row({
+        Tag: "TAG003",
+        Item: "Hijnx Gummy RSO 100mg Space Chunks",
+        Quantity: 150,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
     expect(result.items).toHaveLength(1);
@@ -186,7 +298,11 @@ describe("METRC Parser (synthetic data)", () => {
   it("marks items without TestPassed lab status as WIP", async () => {
     const buffer = await buildMetrcBuffer([
       row({ Tag: "T1", "Lab Test Status": "TestPassed", Quantity: 100 }),
-      row({ Tag: "T2", "Lab Test Status": "SubmittedForTesting", Quantity: 50 }),
+      row({
+        Tag: "T2",
+        "Lab Test Status": "SubmittedForTesting",
+        Quantity: 50,
+      }),
       row({ Tag: "T3", "Lab Test Status": "", Quantity: 25 }),
     ]);
     const result = await parseMetrcExport(buffer);
@@ -197,7 +313,12 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("marks EO Vault items with TestPassed as available", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Tag: "T1", Location: "EO Vault", "Lab Test Status": "TestPassed", Quantity: 500 }),
+      row({
+        Tag: "T1",
+        Location: "EO Vault",
+        "Lab Test Status": "TestPassed",
+        Quantity: 500,
+      }),
     ]);
     const result = await parseMetrcExport(buffer);
     expect(result.items[0].available).toBe(500);
@@ -208,7 +329,11 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("excludes Concentrate (Bulk) category", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Category: "Concentrate (Bulk)", Item: "Some Distillate", Quantity: 1000 }),
+      row({
+        Category: "Concentrate (Bulk)",
+        Item: "Some Distillate",
+        Quantity: 1000,
+      }),
       row({ Quantity: 100 }),
     ]);
     const result = await parseMetrcExport(buffer);
@@ -218,8 +343,16 @@ describe("METRC Parser (synthetic data)", () => {
 
   it("excludes Topical and Tincture categories", async () => {
     const buffer = await buildMetrcBuffer([
-      row({ Category: "Topical (Final Form)", Item: "Pain Cream", Quantity: 50 }),
-      row({ Category: "Tincture (Final Form)", Item: "CBD Tincture", Quantity: 30 }),
+      row({
+        Category: "Topical (Final Form)",
+        Item: "Pain Cream",
+        Quantity: 50,
+      }),
+      row({
+        Category: "Tincture (Final Form)",
+        Item: "CBD Tincture",
+        Quantity: 30,
+      }),
       row({ Quantity: 100 }),
     ]);
     const result = await parseMetrcExport(buffer);
@@ -262,14 +395,23 @@ describe("METRC Parser (synthetic data)", () => {
 
   // ─── Unmatched Rows ─────────────────────────────────────────────────
 
-  it("tracks unmatched items with reason", async () => {
+  it("uses the METRC item name for included items without a known SKU mapping", async () => {
     const buffer = await buildMetrcBuffer([
       row({ Item: "Unknown Product XYZ", Quantity: 42 }),
     ]);
     const result = await parseMetrcExport(buffer);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].skuName).toBe("Unknown Product XYZ");
+    expect(result.items[0].available).toBe(42);
+    expect(result.unmatchedRows).toHaveLength(0);
+  });
+
+  it("tracks blank unmatched items with reason", async () => {
+    const buffer = await buildMetrcBuffer([row({ Item: "", Quantity: 42 })]);
+    const result = await parseMetrcExport(buffer);
     expect(result.items).toHaveLength(0);
     expect(result.unmatchedRows).toHaveLength(1);
-    expect(result.unmatchedRows[0].item).toBe("Unknown Product XYZ");
+    expect(result.unmatchedRows[0].item).toBe("");
     expect(result.unmatchedRows[0].qty).toBe(42);
     expect(result.unmatchedRows[0].reason).toContain("No SKU mapping");
   });
@@ -281,11 +423,12 @@ describe("METRC Parser (synthetic data)", () => {
       row({ Quantity: 100 }),
       row({ Tag: "T2", Quantity: 200 }),
       row({ Category: "Concentrate (Bulk)", Quantity: 50 }),
-      row({ Item: "Unknown Item", Quantity: 10 }),
+      row({ Item: "", Quantity: 10 }),
       row({ Location: "EO Concentrate Cabinet", Quantity: 30 }),
     ]);
     const result = await parseMetrcExport(buffer);
-    const accounted = result.includedRows + result.excludedRows + result.unmatchedRows.length;
+    const accounted =
+      result.includedRows + result.excludedRows + result.unmatchedRows.length;
     expect(accounted).toBe(result.totalRows);
   });
 

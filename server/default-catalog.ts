@@ -17,6 +17,7 @@ type SkuSeed = {
 };
 
 const DEFAULT_BATCH_SIZE = 1000;
+const DEFAULT_UNKNOWN_CATEGORY = "Uncategorized METRC Items";
 
 export const DEFAULT_CATEGORIES: CategorySeed[] = [
   { name: "Space Chunks", theoreticalBatchSize: DEFAULT_BATCH_SIZE },
@@ -24,6 +25,7 @@ export const DEFAULT_CATEGORIES: CategorySeed[] = [
   { name: "Snackbar Vapes", theoreticalBatchSize: DEFAULT_BATCH_SIZE },
   { name: "Hijnx Shooters", theoreticalBatchSize: DEFAULT_BATCH_SIZE },
   { name: "Hijnx Edibles", theoreticalBatchSize: DEFAULT_BATCH_SIZE },
+  { name: DEFAULT_UNKNOWN_CATEGORY, theoreticalBatchSize: DEFAULT_BATCH_SIZE },
 ];
 
 export const DEFAULT_SKUS: SkuSeed[] = [
@@ -47,19 +49,52 @@ export const DEFAULT_SKUS: SkuSeed[] = [
   { name: "Snackbar Vape - Watermelon Lychee 1g", category: "Snackbar Vapes" },
   { name: "Snackbar Vape - Mango Magic 1g", category: "Snackbar Vapes" },
   { name: "Snackbar Vape - Grape Crush 1g", category: "Snackbar Vapes" },
-  { name: "Snackbar Vape - Strawberry Dragonfruit 2g", category: "Snackbar Vapes" },
-  { name: "Snackbar Vape - Peach Passion Fruit 2g", category: "Snackbar Vapes" },
-  { name: "Snackbar Vape - Cherry Pomegranate Lemon 2g", category: "Snackbar Vapes" },
+  {
+    name: "Snackbar Vape - Strawberry Dragonfruit 2g",
+    category: "Snackbar Vapes",
+  },
+  {
+    name: "Snackbar Vape - Peach Passion Fruit 2g",
+    category: "Snackbar Vapes",
+  },
+  {
+    name: "Snackbar Vape - Cherry Pomegranate Lemon 2g",
+    category: "Snackbar Vapes",
+  },
 ];
 
 function normalizeCatalogName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function inferCategoryName(skuName: string): string {
+  const normalized = normalizeCatalogName(skuName);
+  if (normalized.includes("vape")) return "Snackbar Vapes";
+  if (normalized.includes("shooter") || normalized.includes("beverage"))
+    return "Hijnx Shooters";
+  if (normalized.includes("mini")) return "Mini Chunks";
+  if (
+    normalized.includes("chunk") ||
+    normalized.includes("gummy rso") ||
+    normalized.includes("space chunk")
+  ) {
+    return "Space Chunks";
+  }
+  if (
+    normalized.includes("edible") ||
+    normalized.includes("whoopie") ||
+    normalized.includes("dots") ||
+    normalized.includes("sampler")
+  ) {
+    return "Hijnx Edibles";
+  }
+  return DEFAULT_UNKNOWN_CATEGORY;
+}
+
 async function ensureDefaultCategories() {
   const existingCategories = await db.getAllCategories();
   const categoriesByName = new Map(
-    existingCategories.map((category) => [
+    existingCategories.map(category => [
       normalizeCatalogName(category.name),
       category.id,
     ])
@@ -86,20 +121,48 @@ async function ensureDefaultCategories() {
 }
 
 export async function ensureDefaultSkus(skuNames: string[]) {
+  return ensureSkus(skuNames, { createUnknown: false });
+}
+
+export async function ensureInventorySkus(skuNames: string[]) {
+  return ensureSkus(skuNames, { createUnknown: true });
+}
+
+async function ensureSkus(
+  skuNames: string[],
+  options: { createUnknown: boolean }
+) {
   const connection = await db.getDb();
   if (!connection) return;
 
-  const requested = new Set(skuNames.map(normalizeCatalogName));
-  const seedSkus = DEFAULT_SKUS.filter((sku) =>
+  const requestedNames = Array.from(
+    new Map(
+      skuNames
+        .map(name => name.trim())
+        .filter(Boolean)
+        .map(name => [normalizeCatalogName(name), name])
+    ).values()
+  );
+  const requested = new Set(requestedNames.map(normalizeCatalogName));
+  const defaultSeedSkus = DEFAULT_SKUS.filter(sku =>
     requested.has(normalizeCatalogName(sku.name))
   );
+  const defaultSeedKeys = new Set(
+    defaultSeedSkus.map(sku => normalizeCatalogName(sku.name))
+  );
+  const unknownSeedSkus: SkuSeed[] = options.createUnknown
+    ? requestedNames
+        .filter(name => !defaultSeedKeys.has(normalizeCatalogName(name)))
+        .map(name => ({ name, category: inferCategoryName(name) }))
+    : [];
+  const seedSkus = [...defaultSeedSkus, ...unknownSeedSkus];
   if (seedSkus.length === 0) return;
 
   const categoriesByName = await ensureDefaultCategories();
 
   const existingSkus = await db.getAllSkus();
   const skusByName = new Map(
-    existingSkus.map((sku) => [normalizeCatalogName(sku.name), sku])
+    existingSkus.map(sku => [normalizeCatalogName(sku.name), sku])
   );
 
   for (const sku of seedSkus) {
@@ -109,7 +172,8 @@ export async function ensureDefaultSkus(skuNames: string[]) {
     if (!categoryId) continue;
 
     if (existing) {
-      if (!existing.isActive) await db.updateSku(existing.id, { isActive: true });
+      if (!existing.isActive)
+        await db.updateSku(existing.id, { isActive: true });
       continue;
     }
 
@@ -130,5 +194,5 @@ export async function ensureDefaultSkus(skuNames: string[]) {
 }
 
 export async function seedDefaultCatalog() {
-  await ensureDefaultSkus(DEFAULT_SKUS.map((sku) => sku.name));
+  await ensureDefaultSkus(DEFAULT_SKUS.map(sku => sku.name));
 }

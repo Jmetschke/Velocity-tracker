@@ -36,23 +36,31 @@ export interface MetrcParseResult {
 const METRC_TO_SKU: Record<string, string> = {
   "hijnx gummy rso 100mg / 100mg space chunks": "Chill Chunk - 2pk",
   "hijnx gummy rso 50mg/50mg space chunk gummy": "Chill Chunk - 1pk",
-  "hijnx gummy rso cbn 100mg/100mg sleep space chunk gummies": "Sleep Chunk - 2pk",
+  "hijnx gummy rso cbn 100mg/100mg sleep space chunk gummies":
+    "Sleep Chunk - 2pk",
   "hijnx gummy rso cbn 50mg/50mg sleep space chunk gummy": "Sleep Chunk - 1pk",
   "hijnx gummy rso 100mg space chunks": "Alpha Chunk - 2pk",
   "hijnx gummy rso 50mg space chunk gummy": "Alpha Chunk - 1pk",
   "hijnx gummy rso rex og 100mg rex space chunk gummies": "Rex Chunk - 2pk",
   "hijnx gummy rso zuul og 100mg zuul space chunk gummies": "Zuul Chunk - 2pk",
   "hijnx gummy rso 100mg mini space chunk gummies": "MiNi's Chunks - 10pk",
-  "hijnx gummy rso sugar free 100mg mini sugar free space chunk gummies": "Sugar Free MiNi's - 10pk",
+  "hijnx gummy rso sugar free 100mg mini sugar free space chunk gummies":
+    "Sugar Free MiNi's - 10pk",
   "hijnx whoopie rso 100mg whoopie hi cookie": "Whoopie Hi",
   "hijnx micro dots 50mg purple raz - edible": "Micro Dots",
-  "hijnx beverage: triple citrus rso shooter - 2oz": "Hijnx Shooter - Triple Citrus 2oz",
-  "hijnx beverage: watermelon rso shooter - 2oz": "Hijnx Shooter - Watermelon 2oz",
-  "hijnx beverage: blue razz rso shooter - 2oz": "Hijnx Shooter - Sour Blue Razz 2oz",
+  "hijnx beverage: triple citrus rso shooter - 2oz":
+    "Hijnx Shooter - Triple Citrus 2oz",
+  "hijnx beverage: watermelon rso shooter - 2oz":
+    "Hijnx Shooter - Watermelon 2oz",
+  "hijnx beverage: blue razz rso shooter - 2oz":
+    "Hijnx Shooter - Sour Blue Razz 2oz",
   "hijnx edible: sampler medley bag": "Hijnx Sampler Medley Bag",
-  "snackbar vape pen 2g - strawberry dragonfruit": "Snackbar Vape - Strawberry Dragonfruit 2g",
-  "snackbar vape pen 2g - peach passion fruit": "Snackbar Vape - Peach Passion Fruit 2g",
-  "snackbar vape pen 2g - cherry pomegranate lemon": "Snackbar Vape - Cherry Pomegranate Lemon 2g",
+  "snackbar vape pen 2g - strawberry dragonfruit":
+    "Snackbar Vape - Strawberry Dragonfruit 2g",
+  "snackbar vape pen 2g - peach passion fruit":
+    "Snackbar Vape - Peach Passion Fruit 2g",
+  "snackbar vape pen 2g - cherry pomegranate lemon":
+    "Snackbar Vape - Cherry Pomegranate Lemon 2g",
 };
 
 const BATCH_KEYWORD_MAP: Record<string, string> = {
@@ -73,18 +81,30 @@ const BATCH_KEYWORD_MAP: Record<string, string> = {
   "sf mini": "Sugar Free MiNi's - 10pk",
   "sugar free mini": "Sugar Free MiNi's - 10pk",
   "triple citrus": "Hijnx Shooter - Triple Citrus 2oz",
-  "watermelon": "Hijnx Shooter - Watermelon 2oz",
+  watermelon: "Hijnx Shooter - Watermelon 2oz",
   "blue razz": "Hijnx Shooter - Sour Blue Razz 2oz",
 };
 
-const INCLUDED_LOCATIONS = new Set(["product ready for sale", "eo curing room", "eo vault"]);
+const INCLUDED_LOCATIONS = new Set([
+  "product ready for sale",
+  "eo curing room",
+  "eo vault",
+]);
 const WIP_LOCATIONS = new Set(["eo curing room"]);
-const EXCLUDED_CATEGORIES = new Set(["concentrate (bulk)", "topical (final form)", "tincture (final form)"]);
+const EXCLUDED_CATEGORIES = new Set([
+  "concentrate (bulk)",
+  "topical (final form)",
+  "tincture (final form)",
+]);
 const EXCLUDED_ITEM_KEYWORDS = ["pheotera"];
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
-function matchItemToSku(itemName: string, batchName: string, sourceJob: string): string | null {
+function matchItemToSku(
+  itemName: string,
+  batchName: string,
+  sourceJob: string
+): string | null {
   const itemLower = itemName.toLowerCase().trim();
 
   const directMatch = METRC_TO_SKU[itemLower];
@@ -94,11 +114,13 @@ function matchItemToSku(itemName: string, batchName: string, sourceJob: string):
     return "Hijnx Sampler Medley Bag";
   }
 
-  const vapeMatch = itemLower.match(/snackbar\s+vape\s+pen\s*(1g|2g)\s*[-–—]\s*(.+)/);
+  const vapeMatch = itemLower.match(
+    /snackbar\s+vape\s+pen\s*(1g|2g)\s*[-–—]\s*(.+)/
+  );
   if (vapeMatch) {
     const size = vapeMatch[1];
     const flavor = vapeMatch[2].trim();
-    const formatted = flavor.replace(/\b\w/g, (c) => c.toUpperCase());
+    const formatted = flavor.replace(/\b\w/g, c => c.toUpperCase());
     if (formatted === "Magic Mango") {
       return `Snackbar Vape - Mango Magic ${size}`;
     }
@@ -115,15 +137,20 @@ function matchItemToSku(itemName: string, batchName: string, sourceJob: string):
 
 function isExcludedItem(itemName: string): boolean {
   const lower = itemName.toLowerCase();
-  return EXCLUDED_ITEM_KEYWORDS.some((kw) => lower.includes(kw));
+  return EXCLUDED_ITEM_KEYWORDS.some(kw => lower.includes(kw));
 }
 
 // ─── Main Parser ─────────────────────────────────────────────────────
 
-export async function parseMetrcExport(buffer: Buffer): Promise<MetrcParseResult> {
+export async function parseMetrcExport(
+  buffer: Buffer
+): Promise<MetrcParseResult> {
   const rows = await readSheetAsObjects(buffer);
 
-  const skuTotals = new Map<string, { available: number; wip: number; tags: string[] }>();
+  const skuTotals = new Map<
+    string,
+    { available: number; wip: number; tags: string[] }
+  >();
   const unmatchedRows: MetrcParseResult["unmatchedRows"] = [];
   let excludedRows = 0;
 
@@ -138,19 +165,36 @@ export async function parseMetrcExport(buffer: Buffer): Promise<MetrcParseResult
     const batchName = String(row["Production Batch Number"] ?? "");
     const sourceJob = String(row["Source Processing Job(s)"] ?? "");
 
-    if (EXCLUDED_CATEGORIES.has(category.toLowerCase())) { excludedRows++; continue; }
-    if (isExcludedItem(item)) { excludedRows++; continue; }
-    if (!INCLUDED_LOCATIONS.has(location.toLowerCase())) { excludedRows++; continue; }
-    if (uom.toLowerCase() === "g") { excludedRows++; continue; }
+    if (EXCLUDED_CATEGORIES.has(category.toLowerCase())) {
+      excludedRows++;
+      continue;
+    }
+    if (isExcludedItem(item)) {
+      excludedRows++;
+      continue;
+    }
+    if (!INCLUDED_LOCATIONS.has(location.toLowerCase())) {
+      excludedRows++;
+      continue;
+    }
+    if (uom.toLowerCase() === "g") {
+      excludedRows++;
+      continue;
+    }
 
-    const skuName = matchItemToSku(item, batchName, sourceJob);
+    const skuName = matchItemToSku(item, batchName, sourceJob) ?? item;
     if (!skuName) {
       unmatchedRows.push({ item, qty, reason: "No SKU mapping found" });
       continue;
     }
 
-    const isWip = WIP_LOCATIONS.has(location.toLowerCase()) || labStatus !== "TestPassed";
-    const existing = skuTotals.get(skuName) ?? { available: 0, wip: 0, tags: [] };
+    const isWip =
+      WIP_LOCATIONS.has(location.toLowerCase()) || labStatus !== "TestPassed";
+    const existing = skuTotals.get(skuName) ?? {
+      available: 0,
+      wip: 0,
+      tags: [],
+    };
     if (isWip) existing.wip += qty;
     else existing.available += qty;
     existing.tags.push(tag);

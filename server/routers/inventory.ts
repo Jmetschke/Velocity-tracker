@@ -4,7 +4,11 @@ import * as db from "../db";
 import { parseInventoryReport, findBestSkuMatch } from "../parsers";
 import { parseMetrcExport } from "../metrc-parser";
 import { validateInventory, validateMetrc } from "../data-validation";
-import { ensureDefaultSkus, seedDefaultCatalog } from "../default-catalog";
+import {
+  ensureDefaultSkus,
+  ensureInventorySkus,
+  seedDefaultCatalog,
+} from "../default-catalog";
 
 const MAX_FILE = 10_000_000;
 const FILE_TOO_LARGE = "File too large (max ~7.5 MB)";
@@ -24,7 +28,12 @@ export const inventoryRouter = router({
     .query(({ input }) => db.getSnapshotItems(input.snapshotId)),
 
   upload: protectedProcedure
-    .input(z.object({ fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE), fileName: z.string() }))
+    .input(
+      z.object({
+        fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE),
+        fileName: z.string(),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
 
@@ -34,7 +43,13 @@ export const inventoryRouter = router({
 
       const validation = validateInventory(parsedItems, allSkus);
       if (!validation.valid) {
-        return { validation, snapshotId: null, matchedItems: 0, totalParsed: parsedItems.length, unmatchedNames: [] };
+        return {
+          validation,
+          snapshotId: null,
+          matchedItems: 0,
+          totalParsed: parsedItems.length,
+          unmatchedNames: [],
+        };
       }
 
       const snapshotId = await db.createInventorySnapshot({
@@ -43,7 +58,12 @@ export const inventoryRouter = router({
         snapshotDate: new Date(),
       });
 
-      const items: Array<{ skuId: number; qtyInInventory: number; qtyOnHold: number; totalQty: number }> = [];
+      const items: Array<{
+        skuId: number;
+        qtyInInventory: number;
+        qtyOnHold: number;
+        totalQty: number;
+      }> = [];
       const unmatchedNames: string[] = [];
 
       for (const parsed of parsedItems) {
@@ -61,14 +81,28 @@ export const inventoryRouter = router({
       }
 
       if (items.length > 0) {
-        await db.createInventoryItems(items.map((item) => ({ snapshotId, ...item })));
+        await db.createInventoryItems(
+          items.map(item => ({ snapshotId, ...item }))
+        );
       }
 
-      return { snapshotId, matchedItems: items.length, totalParsed: parsedItems.length, unmatchedNames, validation };
+      return {
+        snapshotId,
+        matchedItems: items.length,
+        totalParsed: parsedItems.length,
+        unmatchedNames,
+        validation,
+      };
     }),
 
   uploadMetrc: protectedProcedure
-    .input(z.object({ fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE), fileName: z.string() }))
+    .input(
+      z.object({
+        fileBase64: z.string().max(MAX_FILE, FILE_TOO_LARGE),
+        fileName: z.string(),
+        allowNewSkus: z.boolean().default(false),
+      })
+    )
     .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
 
@@ -76,22 +110,61 @@ export const inventoryRouter = router({
       const validation = validateMetrc(result);
       if (!validation.valid) {
         return {
-          validation, snapshotId: null, matchedItems: 0,
-          totalRows: result.totalRows, includedRows: result.includedRows,
-          excludedRows: result.excludedRows, unmatchedNames: [],
-          unmatchedRows: result.unmatchedRows, parsedItems: [],
+          validation,
+          snapshotId: null,
+          matchedItems: 0,
+          totalRows: result.totalRows,
+          includedRows: result.includedRows,
+          excludedRows: result.excludedRows,
+          unmatchedNames: [],
+          unmatchedRows: result.unmatchedRows,
+          parsedItems: [],
         };
       }
 
-      await ensureDefaultSkus(result.items.map((item) => item.skuName));
+      await ensureDefaultSkus(result.items.map(item => item.skuName));
       let allSkus = await db.getAllSkus();
+      const newSkuNames = result.items
+        .filter(item => !findBestSkuMatch(item.skuName, allSkus))
+        .map(item => item.skuName);
+
+      if (newSkuNames.length > 0 && !input.allowNewSkus) {
+        return {
+          status: "needs_confirmation" as const,
+          validation,
+          snapshotId: null,
+          matchedItems: result.items.length - newSkuNames.length,
+          totalRows: result.totalRows,
+          includedRows: result.includedRows,
+          excludedRows: result.excludedRows,
+          unmatchedNames: [],
+          unmatchedRows: result.unmatchedRows,
+          parsedItems: result.items.map(i => ({
+            skuName: i.skuName,
+            available: i.available,
+            wip: i.wip,
+          })),
+          newSkuNames,
+        };
+      }
+
+      if (newSkuNames.length > 0) {
+        await ensureInventorySkus(newSkuNames);
+        allSkus = await db.getAllSkus();
+      }
+
       const snapshotId = await db.createInventorySnapshot({
         uploadedBy: ctx.user?.id ?? null,
         fileName: `[METRC] ${input.fileName}`,
         snapshotDate: new Date(),
       });
 
-      const items: Array<{ skuId: number; qtyInInventory: number; qtyOnHold: number; totalQty: number }> = [];
+      const items: Array<{
+        skuId: number;
+        qtyInInventory: number;
+        qtyOnHold: number;
+        totalQty: number;
+      }> = [];
       const unmatchedNames: string[] = [];
 
       for (const parsed of result.items) {
@@ -109,11 +182,15 @@ export const inventoryRouter = router({
       }
 
       if (unmatchedNames.length > 0) {
-        await ensureDefaultSkus(unmatchedNames);
+        await ensureInventorySkus(unmatchedNames);
         allSkus = await db.getAllSkus();
         for (let i = unmatchedNames.length - 1; i >= 0; i--) {
-          const parsed = result.items.find((item) => item.skuName === unmatchedNames[i]);
-          const match = parsed ? findBestSkuMatch(parsed.skuName, allSkus) : null;
+          const parsed = result.items.find(
+            item => item.skuName === unmatchedNames[i]
+          );
+          const match = parsed
+            ? findBestSkuMatch(parsed.skuName, allSkus)
+            : null;
           if (!parsed || !match) continue;
           items.push({
             skuId: match.id,
@@ -126,15 +203,26 @@ export const inventoryRouter = router({
       }
 
       if (items.length > 0) {
-        await db.createInventoryItems(items.map((item) => ({ snapshotId, ...item })));
+        await db.createInventoryItems(
+          items.map(item => ({ snapshotId, ...item }))
+        );
       }
 
       return {
-        snapshotId, matchedItems: items.length,
-        totalRows: result.totalRows, includedRows: result.includedRows,
-        excludedRows: result.excludedRows, unmatchedNames,
+        status: "completed" as const,
+        snapshotId,
+        matchedItems: items.length,
+        totalRows: result.totalRows,
+        includedRows: result.includedRows,
+        excludedRows: result.excludedRows,
+        unmatchedNames,
         unmatchedRows: result.unmatchedRows,
-        parsedItems: result.items.map((i) => ({ skuName: i.skuName, available: i.available, wip: i.wip })),
+        parsedItems: result.items.map(i => ({
+          skuName: i.skuName,
+          available: i.available,
+          wip: i.wip,
+        })),
+        newSkuNames,
         validation,
       };
     }),

@@ -3,6 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Upload,
   FileSpreadsheet,
   Loader2,
@@ -17,7 +27,10 @@ import {
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ValidationReport, type ValidationResult } from "@/components/ValidationReport";
+import {
+  ValidationReport,
+  type ValidationResult,
+} from "@/components/ValidationReport";
 
 interface QbParseResult {
   totalRows: number;
@@ -53,7 +66,8 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 interface MetrcResult {
-  snapshotId: number;
+  status?: "completed" | "needs_confirmation";
+  snapshotId: number | null;
   matchedItems: number;
   totalRows: number;
   includedRows: number;
@@ -61,6 +75,7 @@ interface MetrcResult {
   unmatchedNames: string[];
   unmatchedRows: Array<{ item: string; qty: number; reason: string }>;
   parsedItems: Array<{ skuName: string; available: number; wip: number }>;
+  newSkuNames?: string[];
 }
 
 export default function UploadData() {
@@ -69,28 +84,57 @@ export default function UploadData() {
   // ─── METRC Upload ────────────────────────────────────────────────
   const [metrcFile, setMetrcFile] = useState<File | null>(null);
   const [metrcResult, setMetrcResult] = useState<MetrcResult | null>(null);
+  const [pendingMetrcUpload, setPendingMetrcUpload] = useState<{
+    fileBase64: string;
+    fileName: string;
+    newSkuNames: string[];
+  } | null>(null);
   const metrcRef = useRef<HTMLInputElement>(null);
 
-  const [metrcValidation, setMetrcValidation] = useState<ValidationResult | null>(null);
-  const [invValidation, setInvValidation] = useState<ValidationResult | null>(null);
-  const [qbValidation, setQbValidation] = useState<ValidationResult | null>(null);
+  const [metrcValidation, setMetrcValidation] =
+    useState<ValidationResult | null>(null);
+  const [invValidation, setInvValidation] = useState<ValidationResult | null>(
+    null
+  );
+  const [qbValidation, setQbValidation] = useState<ValidationResult | null>(
+    null
+  );
 
   const metrcUpload = trpc.inventory.uploadMetrc.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       setMetrcValidation(data.validation ?? null);
       if (data.validation && !data.validation.valid) {
         toast.error("METRC upload blocked — validation errors found");
         setMetrcFile(null);
         return;
       }
+      if (data.status === "needs_confirmation") {
+        const newSkuNames = data.newSkuNames ?? [];
+        setPendingMetrcUpload({
+          fileBase64: variables.fileBase64,
+          fileName: variables.fileName,
+          newSkuNames,
+        });
+        setMetrcResult(data as MetrcResult);
+        toast.info(
+          `METRC found ${newSkuNames.length} new SKU${newSkuNames.length === 1 ? "" : "s"} to review`
+        );
+        return;
+      }
       utils.inventory.latestSnapshot.invalidate();
       utils.inventory.allSnapshots.invalidate();
+      utils.skus.list.invalidate();
       utils.production.suggestions.invalidate();
       setMetrcResult(data as MetrcResult);
       const unmatchedCount = data.unmatchedNames?.length ?? 0;
+      const newSkuCount = data.newSkuNames?.length ?? 0;
       if (unmatchedCount > 0) {
         toast.success(
           `METRC parsed: ${data.matchedItems} SKUs matched, ${unmatchedCount} unmatched`
+        );
+      } else if (newSkuCount > 0) {
+        toast.success(
+          `METRC parsed: ${data.matchedItems} SKUs matched, ${newSkuCount} new SKU${newSkuCount === 1 ? "" : "s"} added`
         );
       } else {
         toast.success(
@@ -99,7 +143,7 @@ export default function UploadData() {
       }
       setMetrcFile(null);
     },
-    onError: (e) => toast.error("METRC upload failed: " + e.message),
+    onError: e => toast.error("METRC upload failed: " + e.message),
   });
 
   // ─── Inventory Upload (legacy format) ────────────────────────────
@@ -107,7 +151,7 @@ export default function UploadData() {
   const invRef = useRef<HTMLInputElement>(null);
 
   const inventoryUpload = trpc.inventory.upload.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setInvValidation(data.validation ?? null);
       if (data.validation && !data.validation.valid) {
         toast.error("Inventory upload blocked — validation errors found");
@@ -128,17 +172,19 @@ export default function UploadData() {
       }
       setInventoryFile(null);
     },
-    onError: (e) => toast.error("Upload failed: " + e.message),
+    onError: e => toast.error("Upload failed: " + e.message),
   });
 
   // ─── QuickBooks Sales Upload ──────────────────────────────────────
   const [qbFile, setQbFile] = useState<File | null>(null);
   const [aiAnalysis, setAiAnalysis] = useState<AiAnalysis | null>(null);
-  const [qbParseResult, setQbParseResult] = useState<QbParseResult | null>(null);
+  const [qbParseResult, setQbParseResult] = useState<QbParseResult | null>(
+    null
+  );
   const qbRef = useRef<HTMLInputElement>(null);
 
   const qbUpload = trpc.sales.uploadQuickBooks.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setQbValidation(data.validation ?? null);
       setQbParseResult(data.parseResult);
       if (data.status === "validation_failed") {
@@ -157,7 +203,7 @@ export default function UploadData() {
       }
       setQbFile(null);
     },
-    onError: (e) => toast.error("QB upload failed: " + e.message),
+    onError: e => toast.error("QB upload failed: " + e.message),
   });
 
   // ─── Legacy Sales Upload ────────────────────────────────────────
@@ -165,7 +211,7 @@ export default function UploadData() {
   const salesRef = useRef<HTMLInputElement>(null);
 
   const salesUpload = trpc.sales.upload.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       utils.sales.uploads.invalidate();
       utils.skus.list.invalidate();
       utils.production.suggestions.invalidate();
@@ -177,7 +223,7 @@ export default function UploadData() {
       }
       setSalesFile(null);
     },
-    onError: (e) => toast.error("Upload failed: " + e.message),
+    onError: e => toast.error("Upload failed: " + e.message),
   });
 
   const { data: snapshots } = trpc.inventory.allSnapshots.useQuery();
@@ -187,6 +233,16 @@ export default function UploadData() {
     if (!metrcFile) return;
     const base64 = await fileToBase64(metrcFile);
     metrcUpload.mutate({ fileBase64: base64, fileName: metrcFile.name });
+  };
+
+  const confirmNewMetrcSkus = () => {
+    if (!pendingMetrcUpload) return;
+    metrcUpload.mutate({
+      fileBase64: pendingMetrcUpload.fileBase64,
+      fileName: pendingMetrcUpload.fileName,
+      allowNewSkus: true,
+    });
+    setPendingMetrcUpload(null);
   };
 
   const handleInventoryUpload = async () => {
@@ -212,6 +268,53 @@ export default function UploadData() {
 
   return (
     <div className="space-y-6">
+      <AlertDialog
+        open={Boolean(pendingMetrcUpload)}
+        onOpenChange={open => {
+          if (!open && !metrcUpload.isPending) setPendingMetrcUpload(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Add new SKUs from METRC?</AlertDialogTitle>
+            <AlertDialogDescription>
+              METRC found item names that are not currently in your SKU list.
+              Approving will create them as active SKUs and finish the inventory
+              upload.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-56 overflow-y-auto rounded-md border bg-muted/30 p-3">
+            <ul className="space-y-2 text-sm">
+              {pendingMetrcUpload?.newSkuNames.map(name => (
+                <li
+                  key={name}
+                  className="break-words font-medium text-foreground"
+                >
+                  {name}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => {
+                setPendingMetrcUpload(null);
+                setMetrcFile(null);
+                toast.info("METRC upload cancelled. No new SKUs were added.");
+              }}
+            >
+              No, cancel upload
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmNewMetrcSkus}
+              disabled={metrcUpload.isPending}
+            >
+              Yes, add SKUs
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div>
         <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
           Upload Data
@@ -248,7 +351,7 @@ export default function UploadData() {
               type="file"
               accept=".xlsx,.xls"
               className="hidden"
-              onChange={(e) => {
+              onChange={e => {
                 setMetrcFile(e.target.files?.[0] ?? null);
                 setMetrcResult(null);
               }}
@@ -375,19 +478,29 @@ export default function UploadData() {
             <div className="space-y-2 sm:hidden">
               {metrcResult.parsedItems.map((item, i) => (
                 <div key={i} className="rounded-lg border p-3 space-y-2">
-                  <div className="font-medium text-sm text-foreground break-words">{item.skuName}</div>
+                  <div className="font-medium text-sm text-foreground break-words">
+                    {item.skuName}
+                  </div>
                   <div className="grid grid-cols-3 gap-2 text-xs">
                     <div>
-                      <span className="block text-muted-foreground">Available</span>
-                      <span className="tabular-nums font-medium text-primary">{item.available.toLocaleString()}</span>
+                      <span className="block text-muted-foreground">
+                        Available
+                      </span>
+                      <span className="tabular-nums font-medium text-primary">
+                        {item.available.toLocaleString()}
+                      </span>
                     </div>
                     <div>
                       <span className="block text-muted-foreground">WIP</span>
-                      <span className="tabular-nums text-amber-600">{item.wip > 0 ? item.wip.toLocaleString() : "—"}</span>
+                      <span className="tabular-nums text-amber-600">
+                        {item.wip > 0 ? item.wip.toLocaleString() : "—"}
+                      </span>
                     </div>
                     <div>
                       <span className="block text-muted-foreground">Total</span>
-                      <span className="tabular-nums">{(item.available + item.wip).toLocaleString()}</span>
+                      <span className="tabular-nums">
+                        {(item.available + item.wip).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -429,7 +542,10 @@ export default function UploadData() {
                 </p>
                 <div className="space-y-1">
                   {metrcResult.unmatchedRows.map((row, i) => (
-                    <p key={i} className="break-words text-xs text-muted-foreground">
+                    <p
+                      key={i}
+                      className="break-words text-xs text-muted-foreground"
+                    >
                       "{row.item}" (qty: {row.qty}) — {row.reason}
                     </p>
                   ))}
@@ -463,9 +579,7 @@ export default function UploadData() {
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
-                onChange={(e) =>
-                  setInventoryFile(e.target.files?.[0] ?? null)
-                }
+                onChange={e => setInventoryFile(e.target.files?.[0] ?? null)}
               />
               {inventoryFile ? (
                 <div className="flex items-center justify-center gap-2">
@@ -510,7 +624,9 @@ export default function UploadData() {
             <CardTitle className="text-lg flex items-center gap-2">
               <BookOpen className="h-5 w-5 text-primary" />
               QuickBooks Sales Export
-              <Badge variant="default" className="text-xs ml-2">Recommended</Badge>
+              <Badge variant="default" className="text-xs ml-2">
+                Recommended
+              </Badge>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -530,7 +646,7 @@ export default function UploadData() {
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
-                onChange={(e) => {
+                onChange={e => {
                   setQbFile(e.target.files?.[0] ?? null);
                   setQbParseResult(null);
                 }}
@@ -594,7 +710,7 @@ export default function UploadData() {
                 type="file"
                 accept=".xlsx,.xls"
                 className="hidden"
-                onChange={(e) => setSalesFile(e.target.files?.[0] ?? null)}
+                onChange={e => setSalesFile(e.target.files?.[0] ?? null)}
               />
               {salesFile ? (
                 <div className="flex items-center justify-center gap-2">
@@ -645,19 +761,27 @@ export default function UploadData() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-foreground">{qbParseResult.totalRows}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {qbParseResult.totalRows}
+                </p>
                 <p className="text-xs text-muted-foreground">Total Rows</p>
               </div>
               <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-primary">{qbParseResult.matchedItems}</p>
+                <p className="text-2xl font-bold text-primary">
+                  {qbParseResult.matchedItems}
+                </p>
                 <p className="text-xs text-muted-foreground">SKUs Matched</p>
               </div>
               <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-muted-foreground">{qbParseResult.excludedRows}</p>
+                <p className="text-2xl font-bold text-muted-foreground">
+                  {qbParseResult.excludedRows}
+                </p>
                 <p className="text-xs text-muted-foreground">Rows Excluded</p>
               </div>
               <div className="text-center p-3 bg-muted/50 rounded-lg">
-                <p className="text-2xl font-bold text-foreground">{qbParseResult.months?.length ?? 0}</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {qbParseResult.months?.length ?? 0}
+                </p>
                 <p className="text-xs text-muted-foreground">Months Detected</p>
               </div>
             </div>
@@ -666,10 +790,15 @@ export default function UploadData() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">Unmatched QB Products</p>
+                    <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                      Unmatched QB Products
+                    </p>
                     <ul className="mt-2 space-y-1">
                       {qbParseResult.unmatchedRows.map((row, i) => (
-                        <li key={i} className="break-words text-xs text-amber-700 dark:text-amber-300">
+                        <li
+                          key={i}
+                          className="break-words text-xs text-amber-700 dark:text-amber-300"
+                        >
                           "{row.name}" — {row.reason}
                         </li>
                       ))}
@@ -700,21 +829,44 @@ export default function UploadData() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left">
-                    <th className="pb-3 font-medium text-muted-foreground">SKU</th>
-                    <th className="pb-3 font-medium text-muted-foreground text-right">Velocity</th>
-                    <th className="pb-3 font-medium text-muted-foreground text-right">Months</th>
-                    <th className="pb-3 font-medium text-muted-foreground text-right">Total Units</th>
-                    <th className="pb-3 font-medium text-muted-foreground">Notes</th>
+                    <th className="pb-3 font-medium text-muted-foreground">
+                      SKU
+                    </th>
+                    <th className="pb-3 font-medium text-muted-foreground text-right">
+                      Velocity
+                    </th>
+                    <th className="pb-3 font-medium text-muted-foreground text-right">
+                      Months
+                    </th>
+                    <th className="pb-3 font-medium text-muted-foreground text-right">
+                      Total Units
+                    </th>
+                    <th className="pb-3 font-medium text-muted-foreground">
+                      Notes
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {aiAnalysis.velocities?.map((v, i) => (
-                    <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="py-3 font-medium text-foreground">{v.skuName}</td>
-                      <td className="py-3 text-right tabular-nums">{v.dailyVelocity.toFixed(1)}</td>
-                      <td className="py-3 text-right tabular-nums">{v.monthsAnalyzed}</td>
-                      <td className="py-3 text-right tabular-nums">{v.totalUnits.toLocaleString()}</td>
-                      <td className="py-3 text-muted-foreground text-xs">{v.notes}</td>
+                    <tr
+                      key={i}
+                      className="border-b last:border-0 hover:bg-muted/30"
+                    >
+                      <td className="py-3 font-medium text-foreground">
+                        {v.skuName}
+                      </td>
+                      <td className="py-3 text-right tabular-nums">
+                        {v.dailyVelocity.toFixed(1)}
+                      </td>
+                      <td className="py-3 text-right tabular-nums">
+                        {v.monthsAnalyzed}
+                      </td>
+                      <td className="py-3 text-right tabular-nums">
+                        {v.totalUnits.toLocaleString()}
+                      </td>
+                      <td className="py-3 text-muted-foreground text-xs">
+                        {v.notes}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -726,11 +878,32 @@ export default function UploadData() {
                 <div key={i} className="border rounded-lg p-2.5 space-y-2">
                   <div className="font-medium text-sm">{v.skuName}</div>
                   <div className="grid grid-cols-3 gap-2 text-xs">
-                    <div><span className="text-muted-foreground block">Vel/Day</span><span className="tabular-nums">{v.dailyVelocity.toFixed(1)}</span></div>
-                    <div><span className="text-muted-foreground block">Months</span><span className="tabular-nums">{v.monthsAnalyzed}</span></div>
-                    <div><span className="text-muted-foreground block">Total</span><span className="tabular-nums">{v.totalUnits.toLocaleString()}</span></div>
+                    <div>
+                      <span className="text-muted-foreground block">
+                        Vel/Day
+                      </span>
+                      <span className="tabular-nums">
+                        {v.dailyVelocity.toFixed(1)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">
+                        Months
+                      </span>
+                      <span className="tabular-nums">{v.monthsAnalyzed}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">Total</span>
+                      <span className="tabular-nums">
+                        {v.totalUnits.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                  {v.notes && <div className="text-[10px] text-muted-foreground">{v.notes}</div>}
+                  {v.notes && (
+                    <div className="text-[10px] text-muted-foreground">
+                      {v.notes}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -753,7 +926,7 @@ export default function UploadData() {
               </p>
             ) : (
               <div className="space-y-2">
-                {snapshots.map((s) => (
+                {snapshots.map(s => (
                   <div
                     key={s.id}
                     className="flex flex-col gap-2 py-2 border-b last:border-0 sm:flex-row sm:items-center sm:justify-between"
@@ -763,10 +936,7 @@ export default function UploadData() {
                         {s.fileName || "Unnamed upload"}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {format(
-                          new Date(s.snapshotDate),
-                          "MMM d, yyyy h:mm a"
-                        )}
+                        {format(new Date(s.snapshotDate), "MMM d, yyyy h:mm a")}
                       </p>
                     </div>
                     <Badge variant="outline" className="w-fit text-xs">
@@ -792,7 +962,7 @@ export default function UploadData() {
               </p>
             ) : (
               <div className="space-y-2">
-                {salesUploads.map((s) => (
+                {salesUploads.map(s => (
                   <div
                     key={s.id}
                     className="flex flex-col gap-2 py-2 border-b last:border-0 sm:flex-row sm:items-center sm:justify-between"
