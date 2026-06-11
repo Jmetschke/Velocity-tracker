@@ -123,7 +123,12 @@ export const inventoryRouter = router({
     .mutation(async ({ input, ctx }) => {
       const buffer = Buffer.from(input.fileBase64, "base64");
 
-      const result = await parseMetrcExport(buffer);
+      const existingSkus = await db.getAllSkus();
+      const result = await parseMetrcExport(buffer, {
+        includeExcludedItemNames: existingSkus
+          .filter(sku => sku.isActive)
+          .map(sku => sku.name),
+      });
       const validation = validateMetrc(result);
       if (!validation.valid) {
         return {

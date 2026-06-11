@@ -31,6 +31,10 @@ export interface MetrcParseResult {
   excludedRows: number;
 }
 
+export interface MetrcParseOptions {
+  includeExcludedItemNames?: string[];
+}
+
 // ─── Definitive METRC Item → SKU Mapping ─────────────────────────────
 
 const METRC_TO_SKU: Record<string, string> = {
@@ -97,6 +101,11 @@ const EXCLUDED_CATEGORIES = new Set([
   "tincture (final form)",
 ]);
 const EXCLUDED_ITEM_KEYWORDS = ["pheotera"];
+const MANUALLY_TRACKED_EXCLUDED_ITEMS = new Set([
+  "pheotera stick 2oz 100mg/100mg the pain stick",
+  "hijnx micro pump 100mg/100mg daytime focus",
+  "hijnx micro pump 100mg/200mg/200mg/200mg good night sleep",
+]);
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
@@ -140,12 +149,33 @@ function isExcludedItem(itemName: string): boolean {
   return EXCLUDED_ITEM_KEYWORDS.some(kw => lower.includes(kw));
 }
 
+function normalizeTrackedItemName(itemName: string): string {
+  return itemName.toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+function isManuallyTrackedExcludedItem(
+  itemName: string,
+  includeExcludedItems: Set<string>
+): boolean {
+  const normalized = normalizeTrackedItemName(itemName);
+  return (
+    MANUALLY_TRACKED_EXCLUDED_ITEMS.has(normalized) ||
+    includeExcludedItems.has(normalized)
+  );
+}
+
 // ─── Main Parser ─────────────────────────────────────────────────────
 
 export async function parseMetrcExport(
-  buffer: Buffer
+  buffer: Buffer,
+  options: MetrcParseOptions = {}
 ): Promise<MetrcParseResult> {
   const rows = await readSheetAsObjects(buffer);
+  const includeExcludedItems = new Set(
+    (options.includeExcludedItemNames ?? [])
+      .map(normalizeTrackedItemName)
+      .filter(Boolean)
+  );
 
   const skuTotals = new Map<
     string,
@@ -164,12 +194,19 @@ export async function parseMetrcExport(
     const tag = String(row["Tag"] ?? "").trim();
     const batchName = String(row["Production Batch Number"] ?? "");
     const sourceJob = String(row["Source Processing Job(s)"] ?? "");
+    const includeDespiteExclusion = isManuallyTrackedExcludedItem(
+      item,
+      includeExcludedItems
+    );
 
-    if (EXCLUDED_CATEGORIES.has(category.toLowerCase())) {
+    if (
+      !includeDespiteExclusion &&
+      EXCLUDED_CATEGORIES.has(category.toLowerCase())
+    ) {
       excludedRows++;
       continue;
     }
-    if (isExcludedItem(item)) {
+    if (!includeDespiteExclusion && isExcludedItem(item)) {
       excludedRows++;
       continue;
     }

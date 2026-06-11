@@ -371,6 +371,63 @@ describe("METRC Parser (synthetic data)", () => {
     expect(result.excludedRows).toBe(2);
   });
 
+  it("includes manually tracked Pheotera and Micro Pump finished goods", async () => {
+    const buffer = await buildMetrcBuffer([
+      row({
+        Tag: "T1",
+        Item: "Pheotera Stick 2oz 100mg/100mg The Pain Stick",
+        Category: "Topical (Final Form)",
+        Quantity: 160,
+      }),
+      row({
+        Tag: "T2",
+        Item: "Hijnx Micro Pump 100mg/100mg Daytime Focus",
+        Category: "Tincture (Final Form)",
+        Quantity: 345,
+      }),
+      row({
+        Tag: "T3",
+        Item: "Hijnx Micro Pump 100mg/200mg/200mg/200mg Good Night Sleep",
+        Category: "Tincture (Final Form)",
+        Quantity: 419,
+      }),
+    ]);
+    const result = await parseMetrcExport(buffer);
+    const nameMap = new Map(result.items.map(i => [i.skuName, i.available]));
+
+    expect(result.excludedRows).toBe(0);
+    expect(nameMap.get("Pheotera Stick 2oz 100mg/100mg The Pain Stick")).toBe(
+      160
+    );
+    expect(nameMap.get("Hijnx Micro Pump 100mg/100mg Daytime Focus")).toBe(345);
+    expect(
+      nameMap.get("Hijnx Micro Pump 100mg/200mg/200mg/200mg Good Night Sleep")
+    ).toBe(419);
+  });
+
+  it("includes future excluded-category items when their names are manually tracked", async () => {
+    const buffer = await buildMetrcBuffer([
+      row({
+        Tag: "T1",
+        Item: "Hijnx Future Topical 25mg Test Product",
+        Category: "Topical (Final Form)",
+        Quantity: 25,
+      }),
+    ]);
+    const excluded = await parseMetrcExport(buffer);
+    const included = await parseMetrcExport(buffer, {
+      includeExcludedItemNames: ["Hijnx Future Topical 25mg Test Product"],
+    });
+
+    expect(excluded.items).toHaveLength(0);
+    expect(excluded.excludedRows).toBe(1);
+    expect(included.items).toHaveLength(1);
+    expect(included.items[0].skuName).toBe(
+      "Hijnx Future Topical 25mg Test Product"
+    );
+    expect(included.items[0].available).toBe(25);
+  });
+
   it("excludes items not in included locations", async () => {
     const buffer = await buildMetrcBuffer([
       row({ Location: "EO Concentrate Cabinet", Quantity: 500 }),
