@@ -50,6 +50,10 @@ export interface QBParseResult {
   csvForAI: string;
 }
 
+export interface QuickBooksParseOptions {
+  includeManualSkuNames?: string[];
+}
+
 // ─── Definitive QB Name → App SKU Mapping ────────────────────────────
 
 const QB_TO_SKU: Record<string, string> = {
@@ -72,7 +76,8 @@ const QB_TO_SKU: Record<string, string> = {
   "lemon yuzu 1g vape": "Snackbar Vape - Lemon Yuzu 1g",
   "magic mango 1g vape": "Snackbar Vape - Mango Magic 1g",
   "watermelon lychee 1g vape": "Snackbar Vape - Watermelon Lychee 1g",
-  "cherry pomegranate lemon 2g vape": "Snackbar Vape - Cherry Pomegranate Lemon 2g",
+  "cherry pomegranate lemon 2g vape":
+    "Snackbar Vape - Cherry Pomegranate Lemon 2g",
   "peach passionfruit 2g vape": "Snackbar Vape - Peach Passion Fruit 2g",
   "peach passion fruit 2g vape": "Snackbar Vape - Peach Passion Fruit 2g",
   "strawberry dragonfruit 2g vape": "Snackbar Vape - Strawberry Dragonfruit 2g",
@@ -105,14 +110,24 @@ function parseNum(val: any): number {
   return isNaN(num) ? 0 : num;
 }
 
-export function classifyRow(name: string): { type: "category"; name: string } | { type: "total" } | { type: "excluded"; reason: string } | { type: "data" } {
+export function classifyRow(
+  name: string
+):
+  | { type: "category"; name: string }
+  | { type: "total" }
+  | { type: "excluded"; reason: string }
+  | { type: "data" } {
   const lower = name.toLowerCase();
 
   if (CATEGORY_HEADERS.has(lower)) return { type: "category", name: lower };
   if (lower.startsWith("total ") || lower === "total") return { type: "total" };
-  if (lower.includes("(sample)")) return { type: "excluded", reason: "SAMPLE row" };
-  if (EXCLUDED_NAMES.has(lower)) return { type: "excluded", reason: "Discontinued or non-product" };
-  if (/^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),/i.test(name))
+  if (lower.includes("(sample)"))
+    return { type: "excluded", reason: "SAMPLE row" };
+  if (EXCLUDED_NAMES.has(lower))
+    return { type: "excluded", reason: "Discontinued or non-product" };
+  if (
+    /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday),/i.test(name)
+  )
     return { type: "excluded", reason: "Report footer" };
 
   return { type: "data" };
@@ -122,8 +137,50 @@ function matchToSku(qbName: string): string | null {
   return QB_TO_SKU[qbName.toLowerCase().trim()] ?? null;
 }
 
+function normalizeManualName(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[\u2010-\u2015]/g, "-")
+    .replace(/\u00a0/g, " ")
+    .replace(/\s+/g, " ");
+}
+
+function manualMatchWords(name: string): string[] {
+  return normalizeManualName(name)
+    .replace(/[^a-z0-9/\s.-]+/g, " ")
+    .split(/\s+/)
+    .map(word => word.replace(/^[.-]+|[.-]+$/g, ""))
+    .filter(word => word.length > 1);
+}
+
+function findManualSkuName(
+  qbName: string,
+  manualSkuNames: string[]
+): string | null {
+  const normalizedQbName = normalizeManualName(qbName);
+  const exact = manualSkuNames.find(
+    skuName => normalizeManualName(skuName) === normalizedQbName
+  );
+  if (exact) return exact;
+
+  const qbWords = manualMatchWords(qbName);
+  if (qbWords.length === 0) return null;
+
+  return (
+    manualSkuNames.find(skuName => {
+      const skuWords = new Set(manualMatchWords(skuName));
+      return qbWords.every(word => skuWords.has(word));
+    }) ?? null
+  );
+}
+
 function isDetailHeaderRow(row: any[]): boolean {
-  const headers = row.map((v) => String(v ?? "").toLowerCase().trim());
+  const headers = row.map(v =>
+    String(v ?? "")
+      .toLowerCase()
+      .trim()
+  );
   return (
     headers.includes("transaction date") &&
     headers.includes("description") &&
@@ -136,13 +193,19 @@ function parseDate(value: any): Date | null {
   const text = String(value ?? "").trim();
   const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (!match) return null;
-  const date = new Date(Number(match[3]), Number(match[1]) - 1, Number(match[2]));
+  const date = new Date(
+    Number(match[3]),
+    Number(match[1]) - 1,
+    Number(match[2])
+  );
   return isNaN(date.getTime()) ? null : date;
 }
 
 function parseReportDateRange(value: any): { start: Date; end: Date } | null {
   const text = String(value ?? "").trim();
-  const match = text.match(/^([A-Za-z]+)\s+(\d{1,2})-([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/);
+  const match = text.match(
+    /^([A-Za-z]+)\s+(\d{1,2})-([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/
+  );
   if (!match) return null;
   const startMonth = new Date(`${match[1]} 1, ${match[5]}`).getMonth();
   const endMonth = new Date(`${match[3]} 1, ${match[5]}`).getMonth();
@@ -153,7 +216,20 @@ function parseReportDateRange(value: any): { start: Date; end: Date } | null {
   };
 }
 
-const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 function formatDetailMonth(date: Date, minDate: Date, maxDate: Date) {
   const month = MONTH_NAMES[date.getMonth()];
@@ -178,40 +254,64 @@ function formatDetailMonth(date: Date, minDate: Date, maxDate: Date) {
 }
 
 function monthSortKey(name: string) {
-  const match = name.match(/^([A-Z][a-z]{2})(?:\s+\d{1,2}-\d{1,2})?\s+(\d{4})$/);
+  const match = name.match(
+    /^([A-Z][a-z]{2})(?:\s+\d{1,2}-\d{1,2})?\s+(\d{4})$/
+  );
   if (!match) return name;
   const month = MONTH_NAMES.indexOf(match[1]);
   return `${match[2]}-${String(month + 1).padStart(2, "0")}`;
 }
 
-function buildCsvForAI(items: QBParsedItem[], monthNames: string[], partialMonths: string[]) {
+function buildCsvForAI(
+  items: QBParsedItem[],
+  monthNames: string[],
+  partialMonths: string[]
+) {
   const csvLines: string[] = [];
   if (partialMonths.length > 0) {
-    csvLines.push(`# NOTE: The following months are PARTIAL (not full calendar months): ${partialMonths.join(", ")}. Exclude them from velocity calculations.`);
+    csvLines.push(
+      `# NOTE: The following months are PARTIAL (not full calendar months): ${partialMonths.join(", ")}. Exclude them from velocity calculations.`
+    );
   }
-  csvLines.push("SKU Name," + monthNames.map((n) => `${n} Qty`).join(",") + ",Total Qty");
+  csvLines.push(
+    "SKU Name," + monthNames.map(n => `${n} Qty`).join(",") + ",Total Qty"
+  );
 
   for (const item of items) {
     const qtyByMonth: Record<string, number> = {};
     for (const md of item.monthlyData) {
       qtyByMonth[md.month] = md.quantity;
     }
-    const monthQtys = monthNames.map((n) => qtyByMonth[n] || 0);
-    csvLines.push(`${item.skuName},${monthQtys.join(",")},${item.totalQuantity}`);
+    const monthQtys = monthNames.map(n => qtyByMonth[n] || 0);
+    csvLines.push(
+      `${item.skuName},${monthQtys.join(",")},${item.totalQuantity}`
+    );
   }
 
   return csvLines.join("\n");
 }
 
-function parseQuickBooksDetailRows(rows: any[]): QBParseResult {
-  const itemsBySku = new Map<string, {
-    qbName: string;
-    skuName: string;
-    months: Map<string, { quantity: number; amount: number }>;
-  }>();
+function parseQuickBooksDetailRows(
+  rows: any[],
+  options: QuickBooksParseOptions
+): QBParseResult {
+  const itemsBySku = new Map<
+    string,
+    {
+      qbName: string;
+      skuName: string;
+      months: Map<string, { quantity: number; amount: number }>;
+    }
+  >();
   const unmatchedRows: QBParseResult["unmatchedRows"] = [];
   const excludedRows: QBParseResult["excludedRows"] = [];
-  const datedRows: Array<{ qbName: string; skuName: string; date: Date; qty: number; amount: number }> = [];
+  const datedRows: Array<{
+    qbName: string;
+    skuName: string;
+    date: Date;
+    qty: number;
+    amount: number;
+  }> = [];
   const dates: Date[] = [];
   let dataRowCount = 0;
   let currentCategory = "";
@@ -243,6 +343,13 @@ function parseQuickBooksDetailRows(rows: any[]): QBParseResult {
         continue;
       }
       if (classification.type === "excluded") {
+        if (
+          classification.reason !== "SAMPLE row" &&
+          findManualSkuName(groupName, options.includeManualSkuNames ?? [])
+        ) {
+          currentProduct = groupName;
+          continue;
+        }
         currentProduct = "";
         excludedRows.push({ name: groupName, reason: classification.reason });
         continue;
@@ -255,20 +362,38 @@ function parseQuickBooksDetailRows(rows: any[]): QBParseResult {
     if (!date || !currentProduct) continue;
     dataRowCount++;
 
-    if (EXCLUDED_CATEGORIES.has(currentCategory)) {
-      excludedRows.push({ name: currentProduct, reason: "Pheotera brand (child product)" });
+    const manualSkuName = findManualSkuName(
+      currentProduct,
+      options.includeManualSkuNames ?? []
+    );
+
+    if (EXCLUDED_CATEGORIES.has(currentCategory) && !manualSkuName) {
+      excludedRows.push({
+        name: currentProduct,
+        reason: "Pheotera brand (child product)",
+      });
       continue;
     }
 
     const productClassification = classifyRow(currentProduct);
     if (productClassification.type === "excluded") {
-      excludedRows.push({ name: currentProduct, reason: productClassification.reason });
-      continue;
+      if (productClassification.reason !== "SAMPLE row" && manualSkuName) {
+        // Manually tracked discontinued/topical products are intentionally included.
+      } else {
+        excludedRows.push({
+          name: currentProduct,
+          reason: productClassification.reason,
+        });
+        continue;
+      }
     }
 
-    const skuName = matchToSku(currentProduct);
+    const skuName = matchToSku(currentProduct) ?? manualSkuName;
     if (!skuName) {
-      unmatchedRows.push({ name: currentProduct, reason: "No SKU mapping found" });
+      unmatchedRows.push({
+        name: currentProduct,
+        reason: "No SKU mapping found",
+      });
       continue;
     }
 
@@ -281,8 +406,16 @@ function parseQuickBooksDetailRows(rows: any[]): QBParseResult {
   }
 
   const reportRange = parseReportDateRange(rows[2]?.[0]);
-  const minDate = reportRange?.start ?? (dates.length ? new Date(Math.min(...dates.map((d) => d.getTime()))) : new Date());
-  const maxDate = reportRange?.end ?? (dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : new Date());
+  const minDate =
+    reportRange?.start ??
+    (dates.length
+      ? new Date(Math.min(...dates.map(d => d.getTime())))
+      : new Date());
+  const maxDate =
+    reportRange?.end ??
+    (dates.length
+      ? new Date(Math.max(...dates.map(d => d.getTime())))
+      : new Date());
 
   for (const row of datedRows) {
     const month = formatDetailMonth(row.date, minDate, maxDate);
@@ -298,36 +431,45 @@ function parseQuickBooksDetailRows(rows: any[]): QBParseResult {
     itemsBySku.set(row.skuName, item);
   }
 
-  const monthNames = Array.from(new Set(datedRows.map((row) => formatDetailMonth(row.date, minDate, maxDate))))
-    .sort((a, b) => monthSortKey(a).localeCompare(monthSortKey(b)));
+  const monthNames = Array.from(
+    new Set(datedRows.map(row => formatDetailMonth(row.date, minDate, maxDate)))
+  ).sort((a, b) => monthSortKey(a).localeCompare(monthSortKey(b)));
   const partialMonths = monthNames.filter(isPartialMonth);
 
-  const items: QBParsedItem[] = Array.from(itemsBySku.values()).map((item) => {
+  const items: QBParsedItem[] = Array.from(itemsBySku.values()).map(item => {
     const monthlyData = monthNames
-      .map((month) => {
+      .map(month => {
         const monthly = item.months.get(month);
         return {
           month,
           quantity: monthly?.quantity ?? 0,
           amount: monthly?.amount ?? 0,
-          avgPrice: monthly && monthly.quantity !== 0 ? monthly.amount / monthly.quantity : 0,
+          avgPrice:
+            monthly && monthly.quantity !== 0
+              ? monthly.amount / monthly.quantity
+              : 0,
           cogs: 0,
           grossMargin: 0,
         };
       })
-      .filter((month) => month.quantity !== 0 || month.amount !== 0);
+      .filter(month => month.quantity !== 0 || month.amount !== 0);
     return {
       qbName: item.qbName,
       skuName: item.skuName,
       monthlyData,
-      totalQuantity: monthlyData.reduce((sum, month) => sum + month.quantity, 0),
+      totalQuantity: monthlyData.reduce(
+        (sum, month) => sum + month.quantity,
+        0
+      ),
       totalAmount: monthlyData.reduce((sum, month) => sum + month.amount, 0),
     };
   });
 
   return {
     items,
-    unmatchedRows: Array.from(new Map(unmatchedRows.map((row) => [row.name, row])).values()),
+    unmatchedRows: Array.from(
+      new Map(unmatchedRows.map(row => [row.name, row])).values()
+    ),
     excludedRows,
     months: monthNames,
     partialMonths,
@@ -356,7 +498,10 @@ export function isPartialMonth(name: string): boolean {
  * Detect month columns from the header row of a worksheet.
  * Uses the readSheetAsArrays row data (0-indexed).
  */
-function detectMonthsFromRow(headerRow: any[]): { months: MonthColumn[]; totalQtyCol: number } {
+function detectMonthsFromRow(headerRow: any[]): {
+  months: MonthColumn[];
+  totalQtyCol: number;
+} {
   const months: MonthColumn[] = [];
   let totalQtyCol = -1;
 
@@ -387,11 +532,14 @@ function detectMonthsFromRow(headerRow: any[]): { months: MonthColumn[]; totalQt
 
 // ─── Main Parser ─────────────────────────────────────────────────────
 
-export async function parseQuickBooksExport(buffer: Buffer): Promise<QBParseResult> {
+export async function parseQuickBooksExport(
+  buffer: Buffer,
+  options: QuickBooksParseOptions = {}
+): Promise<QBParseResult> {
   const rows = await readSheetAsArrays(buffer);
 
   if (rows.some(isDetailHeaderRow)) {
-    return parseQuickBooksDetailRows(rows);
+    return parseQuickBooksDetailRows(rows, options);
   }
 
   // Detect month columns from row 4 (index 4)
@@ -428,16 +576,31 @@ export async function parseQuickBooksExport(buffer: Buffer): Promise<QBParseResu
     }
 
     if (classification.type === "excluded") {
-      excludedRows.push({ name: rawName, reason: classification.reason });
+      if (
+        classification.reason !== "SAMPLE row" &&
+        findManualSkuName(rawName, options.includeManualSkuNames ?? [])
+      ) {
+        // Manually tracked discontinued products are intentionally included.
+      } else {
+        excludedRows.push({ name: rawName, reason: classification.reason });
+        continue;
+      }
+    }
+
+    const manualSkuName = findManualSkuName(
+      rawName,
+      options.includeManualSkuNames ?? []
+    );
+
+    if (EXCLUDED_CATEGORIES.has(currentCategory) && !manualSkuName) {
+      excludedRows.push({
+        name: rawName,
+        reason: "Pheotera brand (child product)",
+      });
       continue;
     }
 
-    if (EXCLUDED_CATEGORIES.has(currentCategory)) {
-      excludedRows.push({ name: rawName, reason: "Pheotera brand (child product)" });
-      continue;
-    }
-
-    const skuName = matchToSku(rawName);
+    const skuName = matchToSku(rawName) ?? manualSkuName;
     if (!skuName) {
       unmatchedRows.push({ name: rawName, reason: "No SKU mapping found" });
       continue;
@@ -452,7 +615,14 @@ export async function parseQuickBooksExport(buffer: Buffer): Promise<QBParseResu
       const margin = parseNum(row[m.marginCol]);
 
       if (qty !== 0 || amt !== 0) {
-        monthlyData.push({ month: m.name, quantity: qty, amount: amt, avgPrice: avg, cogs, grossMargin: margin });
+        monthlyData.push({
+          month: m.name,
+          quantity: qty,
+          amount: amt,
+          avgPrice: avg,
+          cogs,
+          grossMargin: margin,
+        });
       }
     }
 
@@ -461,10 +631,16 @@ export async function parseQuickBooksExport(buffer: Buffer): Promise<QBParseResu
     const totalQty = totalQtyCol >= 0 ? parseNum(row[totalQtyCol]) : 0;
     const totalAmt = totalQtyCol >= 0 ? parseNum(row[totalQtyCol + 1]) : 0;
 
-    items.push({ qbName: rawName, skuName, monthlyData, totalQuantity: totalQty, totalAmount: totalAmt });
+    items.push({
+      qbName: rawName,
+      skuName,
+      monthlyData,
+      totalQuantity: totalQty,
+      totalAmount: totalAmt,
+    });
   }
 
-  const monthNames = months.map((m) => m.name);
+  const monthNames = months.map(m => m.name);
   const partialMonths = monthNames.filter(isPartialMonth);
 
   return {
