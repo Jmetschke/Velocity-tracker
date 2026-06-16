@@ -405,6 +405,25 @@ describe("METRC Parser (synthetic data)", () => {
     ).toBe(419);
   });
 
+  it("maps the short Pheotera stick label to the pain stick SKU", async () => {
+    const buffer = await buildMetrcBuffer([
+      row({
+        Tag: "T1",
+        Item: "pheotera 2oz stick",
+        Category: "Topical (Final Form)",
+        Quantity: 42,
+      }),
+    ]);
+    const result = await parseMetrcExport(buffer);
+
+    expect(result.excludedRows).toBe(0);
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].skuName).toBe(
+      "Pheotera Stick 2oz 100mg/100mg The Pain Stick"
+    );
+    expect(result.items[0].available).toBe(42);
+  });
+
   it("includes future excluded-category items when their names are manually tracked", async () => {
     const buffer = await buildMetrcBuffer([
       row({

@@ -38,6 +38,7 @@ export interface MetrcParseOptions {
 // ─── Definitive METRC Item → SKU Mapping ─────────────────────────────
 
 const METRC_TO_SKU: Record<string, string> = {
+  "pheotera 2oz stick": "Pheotera Stick 2oz 100mg/100mg The Pain Stick",
   "hijnx gummy rso 100mg / 100mg space chunks": "Chill Chunk - 2pk",
   "hijnx gummy rso 50mg/50mg space chunk gummy": "Chill Chunk - 1pk",
   "hijnx gummy rso cbn 100mg/100mg sleep space chunk gummies":
@@ -102,6 +103,7 @@ const EXCLUDED_CATEGORIES = new Set([
 ]);
 const EXCLUDED_ITEM_KEYWORDS = ["pheotera"];
 const MANUALLY_TRACKED_EXCLUDED_ITEMS = new Set([
+  "pheotera 2oz stick",
   "pheotera stick 2oz 100mg/100mg the pain stick",
   "hijnx micro pump 100mg/100mg daytime focus",
   "hijnx micro pump 100mg/200mg/200mg/200mg good night sleep",

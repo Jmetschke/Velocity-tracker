@@ -191,11 +191,16 @@ function normalizeProductName(value: string) {
     .replace(/\s+/g, " ");
 }
 
-function findMatchingSkuId(
+const CALENDAR_TITLE_ALIASES: Record<string, string> = {
+  "pheotera 2oz stick": "pheotera stick 2oz 100mg 100mg the pain stick",
+};
+
+export function findMatchingSkuId(
   calendarTitle: string,
   skus: Array<{ id: number; name: string }>
 ) {
-  const titleKey = normalizeProductName(calendarTitle);
+  const normalizedTitle = normalizeProductName(calendarTitle);
+  const titleKey = CALENDAR_TITLE_ALIASES[normalizedTitle] ?? normalizedTitle;
   if (!titleKey) return null;
 
   const keyedSkus = skus
