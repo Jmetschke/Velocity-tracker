@@ -28,6 +28,7 @@ import {
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from "./DashboardLayoutSkeleton";
+import { InstallAppButton } from "./InstallAppButton";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
@@ -181,6 +182,8 @@ function DashboardLayoutContent({
           </SidebarContent>
 
           <SidebarFooter className="p-3">
+            <InstallAppButton className="mb-2 w-full group-data-[collapsible=icon]:hidden" />
+            <InstallAppButton compact className="mb-2 hidden group-data-[collapsible=icon]:inline-flex" />
             <div className="flex items-center gap-3 rounded-lg px-1 py-1 w-full group-data-[collapsible=icon]:justify-center">
               <Avatar className="h-9 w-9 border shrink-0">
                 <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
@@ -218,6 +221,7 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
+            <InstallAppButton compact className="h-9 w-9 shrink-0" />
           </div>
         )}
         <main className="flex-1 overflow-x-hidden p-3 sm:p-4 md:p-6">{children}</main>
