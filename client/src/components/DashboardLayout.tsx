@@ -25,6 +25,7 @@ import {
   Rocket,
   PackageCheck,
   MapPin,
+  ExternalLink,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -241,8 +242,8 @@ function DashboardLayoutContent({
               <span className="truncate">Manufacturing Tracker</span>
             </div>
           )}
-          <div className="flex shrink-0 items-center gap-2">
-            <LocationToggle />
+          <div className="flex shrink-0 items-center gap-2 py-2">
+            <LocationSwitcher />
             {isMobile ? (
               <InstallAppButton compact className="h-9 w-9 shrink-0" />
             ) : null}
@@ -254,35 +255,49 @@ function DashboardLayoutContent({
   );
 }
 
-function LocationToggle() {
-  const currentHost =
-    typeof window === "undefined" ? "" : window.location.hostname;
-  const activeOption =
-    locationOptions.find((option) => option.host === currentHost) ??
-    locationOptions[0];
+function LocationSwitcher() {
+  const [selectedLocation, setSelectedLocation] = useState(() => {
+    const currentHost =
+      typeof window === "undefined" ? "" : window.location.hostname;
+    return (
+      locationOptions.find((option) => option.host === currentHost) ??
+      locationOptions[0]
+    );
+  });
 
   return (
-    <nav
-      aria-label="Manufacturing location"
-      className="inline-flex h-9 items-center rounded-md border bg-muted p-0.5"
-    >
-      {locationOptions.map((option) => {
-        const isActive = option.label === activeOption.label;
-        return (
-          <a
-            key={option.label}
-            href={option.href}
-            aria-current={isActive ? "page" : undefined}
-            className={`inline-flex h-8 min-w-11 items-center justify-center rounded-sm px-3 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              isActive
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {option.label}
-          </a>
-        );
-      })}
-    </nav>
+    <div className="flex w-36 flex-col gap-1 sm:w-44">
+      <div
+        aria-label="Manufacturing location"
+        className="grid h-9 grid-cols-2 rounded-md border bg-muted p-0.5"
+        role="group"
+      >
+        {locationOptions.map((option) => {
+          const isSelected = option.label === selectedLocation.label;
+          return (
+            <button
+              key={option.label}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => setSelectedLocation(option)}
+              className={`inline-flex h-8 min-w-0 items-center justify-center rounded-sm px-3 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                isSelected
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+      <a
+        href={selectedLocation.href}
+        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border bg-background px-2 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <span className="truncate">Open {selectedLocation.label}</span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+      </a>
+    </div>
   );
 }
