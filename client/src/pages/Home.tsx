@@ -215,6 +215,7 @@ function SkuMobileCard({ s }: { s: Suggestion }) {
 export default function Home() {
   const [, setLocation] = useLocation();
   const [showWhatIf, setShowWhatIf] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const calendarRange = useMemo(() => {
     const today = new Date();
     return {
@@ -257,6 +258,50 @@ export default function Home() {
   const warningCount = suggestions?.suggestions?.filter((s) => s.urgency === "warning").length ?? 0;
   const okCount = suggestions?.suggestions?.filter((s) => s.urgency === "ok").length ?? 0;
   const activeBatches = batches?.filter((b) => b.type === "batch_hijnx" || b.type === "batch_sb").length ?? 0;
+
+  const handleExportPdf = useCallback(async () => {
+    if (!suggestions?.suggestions?.length || isExportingPdf) return;
+
+    setIsExportingPdf(true);
+    try {
+      await exportProductionNeedsPdf(
+        suggestions.suggestions,
+        {
+          critical: criticalCount,
+          warning: warningCount,
+          ok: okCount,
+          activeBatches,
+        },
+        {
+          inventoryDate: allSnapshots?.[0]
+            ? new Date(allSnapshots[0].snapshotDate)
+            : null,
+          salesDate: salesUploads?.find((u) => u.status === "completed")
+            ? new Date(
+                salesUploads.find((u) => u.status === "completed")!.createdAt,
+              )
+            : null,
+        },
+      );
+      toast.success("Production PDF exported");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unknown export error";
+      toast.error(`PDF export failed: ${message}`);
+      console.error("[PDF Export Error]", error);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  }, [
+    activeBatches,
+    allSnapshots,
+    criticalCount,
+    isExportingPdf,
+    okCount,
+    salesUploads,
+    suggestions,
+    warningCount,
+  ]);
 
   // Build What-If SKU data from the raw skuInputs returned by the suggestions query
   const whatIfSkus: WhatIfSku[] = (suggestions?.skuInputs ?? []).map((s) => ({
@@ -366,20 +411,15 @@ export default function Home() {
                 variant="outline"
                 size="sm"
                 className="w-full sm:w-auto"
-                onClick={() => void exportProductionNeedsPdf(
-                    suggestions.suggestions,
-                    { critical: criticalCount, warning: warningCount, ok: okCount, activeBatches },
-                    {
-                      inventoryDate: allSnapshots?.[0] ? new Date(allSnapshots[0].snapshotDate) : null,
-                      salesDate: salesUploads?.find((u) => u.status === "completed")
-                        ? new Date(salesUploads.find((u) => u.status === "completed")!.createdAt)
-                        : null,
-                    },
-                  )
-                }
+                onClick={() => void handleExportPdf()}
+                disabled={isExportingPdf}
               >
-                <Download className="h-4 w-4 mr-1.5" />
-                Export PDF
+                {isExportingPdf ? (
+                  <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-1.5" />
+                )}
+                {isExportingPdf ? "Exporting..." : "Export PDF"}
               </Button>
             )}
             <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => setLocation("/calendar")}>

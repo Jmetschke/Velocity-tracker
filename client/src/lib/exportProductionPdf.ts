@@ -1,5 +1,6 @@
 import { format } from "date-fns";
-import type jsPDFType from "jspdf";
+import jsPDF, { type jsPDF as jsPDFType } from "jspdf";
+import autoTable from "jspdf-autotable";
 import type { UserOptions } from "jspdf-autotable";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -89,12 +90,6 @@ export async function exportProductionNeedsPdf(
   stats: SummaryStats,
   freshness?: DataFreshness,
 ): Promise<void> {
-  // Dynamic imports — jsPDF is only bundled when this function is called
-  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
-    import("jspdf"),
-    import("jspdf-autotable"),
-  ]);
-
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "letter" });
   const PAGE_W = 279.4;
   const MARGIN = 14;
