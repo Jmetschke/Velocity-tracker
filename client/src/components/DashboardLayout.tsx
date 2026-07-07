@@ -24,6 +24,7 @@ import {
   Settings,
   Rocket,
   PackageCheck,
+  MapPin,
 } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -39,6 +40,19 @@ const menuItems = [
   { icon: CalendarDays, label: "Production Calendar", path: "/calendar" },
   { icon: PackageCheck, label: "Projected Units", path: "/projected-units" },
   { icon: Settings, label: "Categories", path: "/categories" },
+];
+
+const locationOptions = [
+  {
+    label: "IL",
+    href: "https://manufacturing-tracker.onrender.com",
+    host: "manufacturing-tracker.onrender.com",
+  },
+  {
+    label: "NY",
+    href: "https://manufacturing-tracker-ny.onrender.com",
+    host: "manufacturing-tracker-ny.onrender.com",
+  },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -209,8 +223,8 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
-        {isMobile && (
-          <div className="flex border-b h-14 items-center justify-between bg-background/95 px-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+        <div className="flex border-b min-h-14 items-center justify-between gap-3 bg-background/95 px-2 sm:px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+          {isMobile ? (
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
               <div className="flex min-w-0 items-center gap-3">
@@ -221,11 +235,54 @@ function DashboardLayoutContent({
                 </div>
               </div>
             </div>
-            <InstallAppButton compact className="h-9 w-9 shrink-0" />
+          ) : (
+            <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-muted-foreground">
+              <MapPin className="h-4 w-4 shrink-0" />
+              <span className="truncate">Manufacturing Tracker</span>
+            </div>
+          )}
+          <div className="flex shrink-0 items-center gap-2">
+            <LocationToggle />
+            {isMobile ? (
+              <InstallAppButton compact className="h-9 w-9 shrink-0" />
+            ) : null}
           </div>
-        )}
+        </div>
         <main className="flex-1 overflow-x-hidden p-3 sm:p-4 md:p-6">{children}</main>
       </SidebarInset>
     </>
+  );
+}
+
+function LocationToggle() {
+  const currentHost =
+    typeof window === "undefined" ? "" : window.location.hostname;
+  const activeOption =
+    locationOptions.find((option) => option.host === currentHost) ??
+    locationOptions[0];
+
+  return (
+    <nav
+      aria-label="Manufacturing location"
+      className="inline-flex h-9 items-center rounded-md border bg-muted p-0.5"
+    >
+      {locationOptions.map((option) => {
+        const isActive = option.label === activeOption.label;
+        return (
+          <a
+            key={option.label}
+            href={option.href}
+            aria-current={isActive ? "page" : undefined}
+            className={`inline-flex h-8 min-w-11 items-center justify-center rounded-sm px-3 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              isActive
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {option.label}
+          </a>
+        );
+      })}
+    </nav>
   );
 }
