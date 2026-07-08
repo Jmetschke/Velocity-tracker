@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -65,6 +66,7 @@ export default function SkuManagement() {
     bufferDays: "14",
     leadTimeDays: "5",
     customBatchSize: "",
+    metrcItemNames: "",
   });
 
   const resetForm = () =>
@@ -75,6 +77,7 @@ export default function SkuManagement() {
       bufferDays: "14",
       leadTimeDays: "5",
       customBatchSize: "",
+      metrcItemNames: "",
     });
 
   const handleCreate = () => {
@@ -91,6 +94,7 @@ export default function SkuManagement() {
       customBatchSize: form.customBatchSize
         ? parseInt(form.customBatchSize)
         : undefined,
+      metrcItemNames: form.metrcItemNames,
     });
   };
 
@@ -107,6 +111,7 @@ export default function SkuManagement() {
       customBatchSize: form.customBatchSize
         ? parseInt(form.customBatchSize)
         : null,
+      metrcItemNames: form.metrcItemNames,
     });
   };
 
@@ -119,6 +124,7 @@ export default function SkuManagement() {
       bufferDays: String(sku.bufferDays ?? 14),
       leadTimeDays: String(sku.leadTimeDays ?? 5),
       customBatchSize: sku.customBatchSize ? String(sku.customBatchSize) : "",
+      metrcItemNames: sku.metrcItemNames ?? "",
     });
     setEditOpen(true);
   };
@@ -131,10 +137,10 @@ export default function SkuManagement() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-foreground">
-            SKU Management
+            Production Items
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Manage product SKUs, batch sizes, and production parameters.
+            Manage product items, batch sizes, and METRC import names.
           </p>
         </div>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -143,7 +149,7 @@ export default function SkuManagement() {
               <Plus className="h-4 w-4 mr-2" /> Add SKU
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-xl">
+          <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
             <DialogHeader>
               <DialogTitle>Add New SKU</DialogTitle>
             </DialogHeader>
@@ -154,6 +160,17 @@ export default function SkuManagement() {
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   placeholder="e.g., Alpha Chunk - 2pk"
+                />
+              </div>
+              <div>
+                <Label>METRC Item Names</Label>
+                <Textarea
+                  value={form.metrcItemNames}
+                  onChange={(e) =>
+                    setForm({ ...form, metrcItemNames: e.target.value })
+                  }
+                  placeholder="Enter each METRC item name on its own line"
+                  className="min-h-24"
                 />
               </div>
               <div>
@@ -227,7 +244,7 @@ export default function SkuManagement() {
                 {createSku.isPending && (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 )}
-                Create SKU
+                Create Production Item
               </Button>
             </div>
           </DialogContent>
@@ -237,7 +254,7 @@ export default function SkuManagement() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">
-            Active SKUs ({activeSkus.length})
+            Active Production Items ({activeSkus.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -248,7 +265,7 @@ export default function SkuManagement() {
           ) : activeSkus.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
               <Package className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p>No SKUs yet. Add your first product above.</p>
+              <p>No production items yet. Add your first product above.</p>
             </div>
           ) : (
             <>
@@ -259,6 +276,7 @@ export default function SkuManagement() {
                     <tr className="border-b text-left">
                       <th className="pb-3 font-medium text-muted-foreground">Name</th>
                       <th className="pb-3 font-medium text-muted-foreground">Category</th>
+                      <th className="pb-3 font-medium text-muted-foreground">METRC Names</th>
                       <th className="pb-3 font-medium text-muted-foreground text-right">Vel/Day</th>
                       <th className="pb-3 font-medium text-muted-foreground text-right">Par</th>
                       <th className="pb-3 font-medium text-muted-foreground text-right">Batch</th>
@@ -273,6 +291,15 @@ export default function SkuManagement() {
                       <tr key={sku.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
                         <td className="py-3 font-medium text-foreground">{sku.name}</td>
                         <td className="py-3 text-muted-foreground">{sku.categoryName}</td>
+                        <td className="py-3 text-muted-foreground max-w-[260px]">
+                          {sku.metrcItemNames ? (
+                            <span className="line-clamp-2 whitespace-pre-line text-xs">
+                              {sku.metrcItemNames}
+                            </span>
+                          ) : (
+                            <span className="text-xs italic">Uses default mapping</span>
+                          )}
+                        </td>
                         <td className="py-3 text-right tabular-nums">{parseFloat(String(sku.dailyVelocity ?? 0)).toFixed(1)}</td>
                         <td className="py-3 text-right tabular-nums">{(sku.parLevel ?? 0).toLocaleString()}</td>
                         <td className="py-3 text-right tabular-nums">{(sku.customBatchSize ?? sku.netBatchSize ?? 0).toLocaleString()}</td>
@@ -306,6 +333,14 @@ export default function SkuManagement() {
                       <span className="text-muted-foreground truncate">{sku.categoryName}</span>
                       <Badge variant="outline" className="text-[10px]">{sku.velocitySource}</Badge>
                     </div>
+                    <div className="text-xs text-muted-foreground">
+                      <span className="block font-medium text-foreground">METRC Names</span>
+                      {sku.metrcItemNames ? (
+                        <span className="whitespace-pre-line">{sku.metrcItemNames}</span>
+                      ) : (
+                        <span className="italic">Uses default mapping</span>
+                      )}
+                    </div>
                     <div className="grid grid-cols-2 gap-2 text-xs min-[430px]:grid-cols-3">
                       <div><span className="text-muted-foreground block">Vel/Day</span><span className="tabular-nums">{parseFloat(String(sku.dailyVelocity ?? 0)).toFixed(1)}</span></div>
                       <div><span className="text-muted-foreground block">Par Level</span><span className="tabular-nums">{(sku.parLevel ?? 0).toLocaleString()}</span></div>
@@ -327,7 +362,7 @@ export default function SkuManagement() {
         <Card>
           <CardHeader>
             <CardTitle className="text-lg text-muted-foreground">
-              Inactive SKUs ({inactiveSkus.length})
+              Inactive Production Items ({inactiveSkus.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -360,9 +395,9 @@ export default function SkuManagement() {
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Edit SKU</DialogTitle>
+            <DialogTitle>Edit Production Item</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-2">
             <div>
@@ -389,6 +424,17 @@ export default function SkuManagement() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div>
+              <Label>METRC Item Names</Label>
+              <Textarea
+                value={form.metrcItemNames}
+                onChange={(e) =>
+                  setForm({ ...form, metrcItemNames: e.target.value })
+                }
+                placeholder="Enter each METRC item name on its own line"
+                className="min-h-24"
+              />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>

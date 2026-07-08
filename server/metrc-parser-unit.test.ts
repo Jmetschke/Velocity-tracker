@@ -255,6 +255,25 @@ describe("METRC Parser (synthetic data)", () => {
     expect(nameMap.get("Hijnx Shooter - Sour Blue Razz 2oz")).toBe(70);
   });
 
+  it("uses configured METRC item names before default mappings", async () => {
+    const buffer = await buildMetrcBuffer([
+      row({
+        Tag: "NY001",
+        Item: "NY Label Alpha Gummies 100mg 2pk",
+        Quantity: 321,
+      }),
+    ]);
+    const result = await parseMetrcExport(buffer, {
+      itemNameMap: {
+        "NY Label Alpha Gummies 100mg 2pk": "Alpha Chunk - 2pk",
+      },
+    });
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].skuName).toBe("Alpha Chunk - 2pk");
+    expect(result.items[0].available).toBe(321);
+  });
+
   // ─── Quantity Aggregation ───────────────────────────────────────────
 
   it("sums quantities across multiple tags of the same SKU", async () => {

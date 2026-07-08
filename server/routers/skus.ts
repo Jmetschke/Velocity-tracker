@@ -4,6 +4,15 @@ import * as db from "../db";
 import { calculateParLevel } from "../scheduling";
 import type { InsertSku } from "../../drizzle/schema";
 
+function normalizeMetrcItemNames(value: string | null | undefined) {
+  if (value == null) return value;
+  const names = value
+    .split(/[\n,]+/)
+    .map(name => name.trim())
+    .filter(Boolean);
+  return names.length > 0 ? Array.from(new Set(names)).join("\n") : null;
+}
+
 export const skusRouter = router({
   list: protectedProcedure.query(() => db.getAllSkus()),
 
@@ -16,6 +25,7 @@ export const skusRouter = router({
         bufferDays: z.number().min(1).default(14),
         leadTimeDays: z.number().min(1).default(5),
         customBatchSize: z.number().positive().optional(),
+        metrcItemNames: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
@@ -29,6 +39,7 @@ export const skusRouter = router({
         bufferDays: input.bufferDays,
         leadTimeDays: input.leadTimeDays,
         customBatchSize: input.customBatchSize ?? null,
+        metrcItemNames: normalizeMetrcItemNames(input.metrcItemNames) ?? null,
       });
       return { id };
     }),
@@ -42,11 +53,15 @@ export const skusRouter = router({
         bufferDays: z.number().min(1).optional(),
         leadTimeDays: z.number().min(1).optional(),
         customBatchSize: z.number().positive().nullable().optional(),
+        metrcItemNames: z.string().nullable().optional(),
         isActive: z.boolean().optional(),
       })
     )
     .mutation(async ({ input }) => {
       const { id, ...data } = input;
+      if ("metrcItemNames" in data) {
+        data.metrcItemNames = normalizeMetrcItemNames(data.metrcItemNames);
+      }
       await db.updateSku(id, data as Partial<InsertSku>);
       return { success: true };
     }),

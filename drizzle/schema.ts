@@ -55,6 +55,7 @@ export const skus = sqliteTable("skus", {
   bufferDays: integer("bufferDays").default(14),
   leadTimeDays: integer("leadTimeDays").default(5),
   customBatchSize: integer("customBatchSize"),
+  metrcItemNames: text("metrcItemNames"),
   isActive: boolean("isActive").default(true),
   createdAt: timestamp("createdAt"),
   updatedAt: timestamp("updatedAt"),

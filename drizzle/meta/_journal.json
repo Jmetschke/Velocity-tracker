@@ -15,6 +15,13 @@
       "when": 1778860800000,
       "tag": "0001_product_launch_roadmap",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783488000000,
+      "tag": "0002_sku_metrc_item_names",
+      "breakpoints": true
     }
   ]
 }

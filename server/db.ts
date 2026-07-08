@@ -214,6 +214,7 @@ export async function getAllSkus() {
       bufferDays: skus.bufferDays,
       leadTimeDays: skus.leadTimeDays,
       customBatchSize: skus.customBatchSize,
+      metrcItemNames: skus.metrcItemNames,
       netBatchSize: skuCategories.netBatchSize,
       isActive: skus.isActive,
       createdAt: skus.createdAt,

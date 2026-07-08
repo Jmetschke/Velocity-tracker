@@ -34,7 +34,7 @@ import { InstallAppButton } from "./InstallAppButton";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/" },
-  { icon: Package, label: "SKU Management", path: "/skus" },
+  { icon: Package, label: "Production Items", path: "/skus" },
   { icon: Upload, label: "Upload Data", path: "/upload" },
   { icon: TrendingUp, label: "Velocity & Par", path: "/velocity" },
   { icon: Rocket, label: "Product Launch", path: "/product-launch-roadmap" },

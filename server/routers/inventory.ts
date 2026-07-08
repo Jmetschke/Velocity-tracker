@@ -30,6 +30,31 @@ function hasExactSkuName(
   return skus.some(sku => normalizeSkuName(sku.name) === normalized);
 }
 
+function splitMetrcItemNames(value: string | null | undefined) {
+  return (value ?? "")
+    .split(/[\n,]+/)
+    .map(name => name.trim())
+    .filter(Boolean);
+}
+
+function buildMetrcSkuMapping(
+  skus: Array<{ name: string; metrcItemNames?: string | null; isActive?: boolean | null }>
+) {
+  const itemNameMap: Record<string, string> = {};
+  const includeExcludedItemNames: string[] = [];
+
+  for (const sku of skus) {
+    if (!sku.isActive) continue;
+    includeExcludedItemNames.push(sku.name);
+    for (const metrcName of splitMetrcItemNames(sku.metrcItemNames)) {
+      itemNameMap[metrcName] = sku.name;
+      includeExcludedItemNames.push(metrcName);
+    }
+  }
+
+  return { itemNameMap, includeExcludedItemNames };
+}
+
 export const inventoryRouter = router({
   latestSnapshot: protectedProcedure.query(async () => {
     const snapshot = await db.getLatestSnapshot();
@@ -124,10 +149,10 @@ export const inventoryRouter = router({
       const buffer = Buffer.from(input.fileBase64, "base64");
 
       const existingSkus = await db.getAllSkus();
+      const metrcMapping = buildMetrcSkuMapping(existingSkus);
       const result = await parseMetrcExport(buffer, {
-        includeExcludedItemNames: existingSkus
-          .filter(sku => sku.isActive)
-          .map(sku => sku.name),
+        includeExcludedItemNames: metrcMapping.includeExcludedItemNames,
+        itemNameMap: metrcMapping.itemNameMap,
       });
       const validation = validateMetrc(result);
       if (!validation.valid) {

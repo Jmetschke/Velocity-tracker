@@ -11,9 +11,9 @@ import { Loader2 } from "lucide-react";
 
 // ─── Eager: Home is the landing page, always needed immediately ─────
 import Home from "./pages/Home";
+import SkuManagement from "./pages/SkuManagement";
 
 // ─── Lazy: secondary pages loaded on demand ─────────────────────────
-const SkuManagement = lazy(() => import("./pages/SkuManagement"));
 const UploadData = lazy(() => import("./pages/UploadData"));
 const VelocityPar = lazy(() => import("./pages/VelocityPar"));
 const ProductionCalendar = lazy(() => import("./pages/ProductionCalendar"));
@@ -49,7 +49,7 @@ function Router() {
     <DashboardLayout>
       <Switch>
         <Route path="/" component={guarded(Home, "Dashboard")} />
-        <Route path="/skus" component={guarded(SkuManagement, "SKU Management")} />
+        <Route path="/skus" component={guarded(SkuManagement, "Production Items")} />
         <Route path="/upload" component={guarded(UploadData, "Upload Data")} />
         <Route path="/velocity" component={guarded(VelocityPar, "Velocity & Par")} />
         <Route path="/calendar" component={guarded(ProductionCalendar, "Production Calendar")} />

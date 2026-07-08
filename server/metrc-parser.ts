@@ -33,6 +33,7 @@ export interface MetrcParseResult {
 
 export interface MetrcParseOptions {
   includeExcludedItemNames?: string[];
+  itemNameMap?: Record<string, string>;
 }
 
 // ─── Definitive METRC Item → SKU Mapping ─────────────────────────────
@@ -114,9 +115,13 @@ const MANUALLY_TRACKED_EXCLUDED_ITEMS = new Set([
 function matchItemToSku(
   itemName: string,
   batchName: string,
-  sourceJob: string
+  sourceJob: string,
+  itemNameMap: Record<string, string> = {}
 ): string | null {
   const itemLower = itemName.toLowerCase().trim();
+
+  const configuredMatch = itemNameMap[normalizeTrackedItemName(itemName)];
+  if (configuredMatch) return configuredMatch;
 
   const directMatch = METRC_TO_SKU[itemLower];
   if (directMatch) return directMatch;
@@ -178,6 +183,14 @@ export async function parseMetrcExport(
       .map(normalizeTrackedItemName)
       .filter(Boolean)
   );
+  const itemNameMap = Object.fromEntries(
+    Object.entries(options.itemNameMap ?? {})
+      .map(([metrcName, skuName]) => [
+        normalizeTrackedItemName(metrcName),
+        skuName.trim(),
+      ])
+      .filter(([metrcName, skuName]) => metrcName && skuName)
+  );
 
   const skuTotals = new Map<
     string,
@@ -221,7 +234,7 @@ export async function parseMetrcExport(
       continue;
     }
 
-    const skuName = matchItemToSku(item, batchName, sourceJob) ?? item;
+    const skuName = matchItemToSku(item, batchName, sourceJob, itemNameMap) ?? item;
     if (!skuName) {
       unmatchedRows.push({ item, qty, reason: "No SKU mapping found" });
       continue;
