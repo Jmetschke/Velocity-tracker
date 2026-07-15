@@ -121,6 +121,13 @@ async function ensureDefaultCategories() {
   return categoriesByName;
 }
 
+export async function ensureCategoryForSkuName(skuName: string) {
+  const categoriesByName = await ensureDefaultCategories();
+  return categoriesByName.get(
+    normalizeCatalogName(inferCategoryName(skuName)),
+  );
+}
+
 export async function ensureDefaultSkus(skuNames: string[]) {
   return ensureSkus(skuNames, { createUnknown: false });
 }

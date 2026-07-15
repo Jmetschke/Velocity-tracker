@@ -19,13 +19,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, Loader2, Package } from "lucide-react";
-import { useState } from "react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Loader2,
+  Package,
+  Upload,
+} from "lucide-react";
+import { useRef, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../server/routers";
 
 type Sku = inferRouterOutputs<AppRouter>["skus"]["list"][number];
 import { toast } from "sonner";
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("Could not read the selected file."));
+    reader.readAsDataURL(file);
+  });
+}
 
 export default function SkuManagement() {
   const utils = trpc.useUtils();
@@ -55,9 +71,31 @@ export default function SkuManagement() {
     },
     onError: (e) => toast.error(e.message),
   });
+  const previewImport = trpc.skus.previewProductionItemKey.useMutation({
+    onSuccess: () => setImportOpen(true),
+    onError: (e) => toast.error(e.message),
+  });
+  const importItems = trpc.skus.importProductionItemKey.useMutation({
+    onSuccess: (result) => {
+      utils.skus.list.invalidate();
+      toast.success(
+        `Import complete: ${result.created} added, ${result.updated} updated`,
+      );
+      setImportOpen(false);
+      setPendingImport(null);
+      previewImport.reset();
+    },
+    onError: (e) => toast.error(e.message),
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [pendingImport, setPendingImport] = useState<{
+    fileBase64: string;
+    fileName: string;
+  } | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const [editingSku, setEditingSku] = useState<Sku | null>(null);
   const [form, setForm] = useState({
     name: "",
@@ -132,6 +170,27 @@ export default function SkuManagement() {
   const activeSkus = skuList?.filter((s) => s.isActive) ?? [];
   const inactiveSkus = skuList?.filter((s) => !s.isActive) ?? [];
 
+  const handleImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".xlsx")) {
+      toast.error("Please choose an Excel workbook (.xlsx).");
+      return;
+    }
+    try {
+      const upload = { fileBase64: await fileToBase64(file), fileName: file.name };
+      setPendingImport(upload);
+      previewImport.mutate(upload);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not read file.");
+    } finally {
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  };
+
+  const previewRows = previewImport.data?.rows ?? [];
+  const newItemCount = previewRows.filter(row => row.status === "new").length;
+  const matchedItemCount = previewRows.length - newItemCount;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -143,7 +202,30 @@ export default function SkuManagement() {
             Manage product items, batch sizes, and METRC import names.
           </p>
         </div>
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            className="hidden"
+            onChange={event => handleImportFile(event.target.files?.[0])}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full sm:w-auto"
+            disabled={previewImport.isPending}
+            onClick={() => importInputRef.current?.click()}
+          >
+            {previewImport.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
+            Import Item Key
+          </Button>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button onClick={resetForm} size="sm" className="w-full sm:w-auto">
               <Plus className="h-4 w-4 mr-2" /> Add SKU
@@ -248,8 +330,72 @@ export default function SkuManagement() {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
+
+      <Dialog open={importOpen} onOpenChange={setImportOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Review Production Item Import</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-2 text-sm">
+              <Badge>{newItemCount} new items</Badge>
+              <Badge variant="outline">{matchedItemCount} matched items</Badge>
+              <span className="text-muted-foreground">
+                {pendingImport?.fileName}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              New common names will be added as Production Items. Matched items
+              will keep their current name and receive the METRC names below.
+            </p>
+            <div className="max-h-[50vh] space-y-2 overflow-y-auto pr-1">
+              {previewRows.map(row => (
+                <div
+                  key={`${row.sourceRow}-${row.commonName}`}
+                  className="rounded-lg border p-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="font-medium">{row.commonName}</div>
+                      {row.matchedSkuName ? (
+                        <div className="text-xs text-muted-foreground">
+                          Matches existing item: {row.matchedSkuName}
+                        </div>
+                      ) : null}
+                    </div>
+                    <Badge variant={row.status === "new" ? "default" : "outline"}>
+                      {row.status === "new" ? "Will add" : "Will update"}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 whitespace-pre-line text-xs text-muted-foreground">
+                    {row.metrcItemNames.length > 0
+                      ? row.metrcItemNames.join("\n")
+                      : "No METRC names supplied"}
+                  </div>
+                  {row.batchSize ? (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Batch size: {row.batchSize.toLocaleString()}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+            <Button
+              className="w-full"
+              disabled={!pendingImport || importItems.isPending}
+              onClick={() => pendingImport && importItems.mutate(pendingImport)}
+            >
+              {importItems.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Import {previewRows.length} Production Items
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>

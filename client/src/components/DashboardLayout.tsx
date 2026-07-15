@@ -43,18 +43,46 @@ const menuItems = [
   { icon: Settings, label: "Categories", path: "/categories" },
 ];
 
-const locationOptions = [
-  {
-    label: "IL",
-    href: "https://manufacturing-tracker.onrender.com",
-    host: "manufacturing-tracker.onrender.com",
-  },
-  {
-    label: "NY",
-    href: "https://manufacturing-tracker-ny.onrender.com",
-    host: "manufacturing-tracker-ny.onrender.com",
-  },
-];
+const externalNavigation = {
+  IL: [
+    {
+      label: "Production Tracker",
+      href: "https://manufacturing-tracker.onrender.com",
+    },
+    {
+      label: "Velocity Tracker",
+      href: "https://velocity-tracker-zc5x.onrender.com",
+    },
+    {
+      label: "Recipe Tracker",
+      href: "https://recipe-workbook.onrender.com",
+    },
+    {
+      label: "Ingredient Tracker",
+      href: "https://ingredient-projection-workbook.onrender.com",
+    },
+  ],
+  NY: [
+    {
+      label: "Production Tracker",
+      href: "https://manufacturing-tracker-ny.onrender.com",
+    },
+    {
+      label: "Ingredient Tracker",
+      href: "https://ingredient-projection-workbook-ny.onrender.com",
+    },
+    {
+      label: "Velocity Tracker",
+      href: "https://velocity-tracker-ny.onrender.com",
+    },
+    {
+      label: "Recipe Tracker",
+      href: "https://recipe-workbook-ny.onrender.com",
+    },
+  ],
+} as const;
+
+type NavigationGroup = keyof typeof externalNavigation;
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 260;
@@ -224,7 +252,7 @@ function DashboardLayoutContent({
       </div>
 
       <SidebarInset>
-        <div className="flex border-b min-h-14 items-center justify-between gap-3 bg-background/95 px-2 sm:px-4 backdrop-blur supports-[backdrop-filter]:backdrop-blur sticky top-0 z-40">
+        <div className="sticky top-0 z-40 flex min-h-14 flex-col gap-2 border-b bg-background/95 px-2 py-2 backdrop-blur supports-[backdrop-filter]:backdrop-blur sm:px-4 lg:flex-row lg:items-center lg:justify-between">
           {isMobile ? (
             <div className="flex min-w-0 items-center gap-2">
               <SidebarTrigger className="h-9 w-9 rounded-lg bg-background" />
@@ -242,8 +270,8 @@ function DashboardLayoutContent({
               <span className="truncate">Manufacturing Tracker</span>
             </div>
           )}
-          <div className="flex shrink-0 items-center gap-2 py-2">
-            <LocationSwitcher />
+          <div className="flex min-w-0 items-center gap-2">
+            <ExternalNavigation />
             {isMobile ? (
               <InstallAppButton compact className="h-9 w-9 shrink-0" />
             ) : null}
@@ -255,49 +283,58 @@ function DashboardLayoutContent({
   );
 }
 
-function LocationSwitcher() {
-  const [selectedLocation, setSelectedLocation] = useState(() => {
+function ExternalNavigation() {
+  const [selectedGroup, setSelectedGroup] = useState<NavigationGroup>(() => {
     const currentHost =
       typeof window === "undefined" ? "" : window.location.hostname;
-    return (
-      locationOptions.find((option) => option.host === currentHost) ??
-      locationOptions[0]
-    );
+    return externalNavigation.NY.some(
+      ({ href }) => new URL(href).hostname === currentHost,
+    )
+      ? "NY"
+      : "IL";
   });
 
   return (
-    <div className="flex w-36 flex-col gap-1 sm:w-44">
+    <nav
+      aria-label="External tools"
+      className="flex min-w-0 flex-1 items-center gap-2"
+    >
       <div
-        aria-label="Manufacturing location"
-        className="grid h-9 grid-cols-2 rounded-md border bg-muted p-0.5"
+        aria-label="Location group"
+        className="grid h-9 shrink-0 grid-cols-2 rounded-md border bg-muted p-0.5"
         role="group"
       >
-        {locationOptions.map((option) => {
-          const isSelected = option.label === selectedLocation.label;
+        {(Object.keys(externalNavigation) as NavigationGroup[]).map((group) => {
+          const isSelected = group === selectedGroup;
           return (
             <button
-              key={option.label}
+              key={group}
               type="button"
               aria-pressed={isSelected}
-              onClick={() => setSelectedLocation(option)}
-              className={`inline-flex h-8 min-w-0 items-center justify-center rounded-sm px-3 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+              onClick={() => setSelectedGroup(group)}
+              className={`inline-flex h-8 items-center justify-center rounded-sm px-3 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 isSelected
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {option.label}
+              {group}
             </button>
           );
         })}
       </div>
-      <a
-        href={selectedLocation.href}
-        className="inline-flex h-8 items-center justify-center gap-1.5 rounded-md border bg-background px-2 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-      >
-        <span className="truncate">Open {selectedLocation.label}</span>
-        <ExternalLink className="h-3.5 w-3.5 shrink-0" />
-      </a>
-    </div>
+      <div className="flex min-w-0 gap-1.5 overflow-x-auto pb-0.5">
+        {externalNavigation[selectedGroup].map((link) => (
+          <a
+            key={link.href}
+            href={link.href}
+            className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-md border bg-background px-2.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring xl:px-3 xl:text-sm"
+          >
+            <span>{link.label}</span>
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          </a>
+        ))}
+      </div>
+    </nav>
   );
 }

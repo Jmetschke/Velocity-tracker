@@ -3,6 +3,9 @@ import { z } from "zod";
 import * as db from "../db";
 import { calculateParLevel } from "../scheduling";
 import type { InsertSku } from "../../drizzle/schema";
+import { findBestSkuMatch } from "../parsers";
+import { parseProductionItemKey } from "../production-item-key-parser";
+import { ensureCategoryForSkuName } from "../default-catalog";
 
 function normalizeMetrcItemNames(value: string | null | undefined) {
   if (value == null) return value;
@@ -13,8 +16,97 @@ function normalizeMetrcItemNames(value: string | null | undefined) {
   return names.length > 0 ? Array.from(new Set(names)).join("\n") : null;
 }
 
+function decodeWorkbook(fileBase64: string) {
+  const data = fileBase64.includes(",")
+    ? fileBase64.slice(fileBase64.indexOf(",") + 1)
+    : fileBase64;
+  const buffer = Buffer.from(data, "base64");
+  if (buffer.length === 0) throw new Error("The uploaded workbook is empty.");
+  return buffer;
+}
+
+async function previewProductionItemKey(fileBase64: string) {
+  const parsedRows = await parseProductionItemKey(decodeWorkbook(fileBase64));
+  const existingSkus = await db.getAllSkus();
+  return parsedRows.map(row => {
+    const match = findBestSkuMatch(row.commonName, existingSkus);
+    return {
+      ...row,
+      status: match ? ("matched" as const) : ("new" as const),
+      matchedSkuId: match?.id ?? null,
+      matchedSkuName: match?.name ?? null,
+    };
+  });
+}
+
 export const skusRouter = router({
   list: protectedProcedure.query(() => db.getAllSkus()),
+
+  previewProductionItemKey: protectedProcedure
+    .input(
+      z.object({
+        fileBase64: z.string().min(1).max(15_000_000),
+        fileName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => ({
+      rows: await previewProductionItemKey(input.fileBase64),
+    })),
+
+  importProductionItemKey: protectedProcedure
+    .input(
+      z.object({
+        fileBase64: z.string().min(1).max(15_000_000),
+        fileName: z.string().min(1),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      const rows = await previewProductionItemKey(input.fileBase64);
+      let created = 0;
+      let updated = 0;
+
+      for (const row of rows) {
+        const metrcItemNames = normalizeMetrcItemNames(
+          row.metrcItemNames.join("\n"),
+        );
+
+        if (row.matchedSkuId) {
+          const existing = await db.getSkuById(row.matchedSkuId);
+          if (!existing) continue;
+          const mergedNames = normalizeMetrcItemNames(
+            [existing.metrcItemNames, metrcItemNames].filter(Boolean).join("\n"),
+          );
+          await db.updateSku(existing.id, {
+            metrcItemNames: mergedNames,
+            isActive: true,
+          });
+          updated++;
+          continue;
+        }
+
+        const categoryId = await ensureCategoryForSkuName(
+          `${row.commonName} ${row.metrcItemNames.join(" ")}`,
+        );
+        if (!categoryId) {
+          throw new Error(`Could not determine a category for ${row.commonName}.`);
+        }
+        await db.createSku({
+          name: row.commonName,
+          categoryId,
+          dailyVelocity: 0,
+          velocitySource: "manual",
+          parLevel: 0,
+          bufferDays: 14,
+          leadTimeDays: 5,
+          customBatchSize: row.batchSize,
+          metrcItemNames,
+          isActive: true,
+        });
+        created++;
+      }
+
+      return { created, updated, total: rows.length };
+    }),
 
   create: protectedProcedure
     .input(
