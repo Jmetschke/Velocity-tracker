@@ -1,4 +1,4 @@
-import { Suspense, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -7,39 +7,25 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import PageErrorBoundary from "./components/PageErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
-import { Loader2 } from "lucide-react";
-import { lazyWithReload } from "./lib/lazyWithReload";
 
-// ─── Eager: Home is the landing page, always needed immediately ─────
+// Keep routes in the main bundle. Installed desktop PWAs can remain open
+// across deployments, while hashed lazy chunks are replaced on the server.
 import Home from "./pages/Home";
 import SkuManagement from "./pages/SkuManagement";
+import UploadData from "./pages/UploadData";
+import VelocityPar from "./pages/VelocityPar";
+import ProductionCalendar from "./pages/ProductionCalendar";
+import ProjectedUnits from "./pages/ProjectedUnits";
+import Categories from "./pages/Categories";
+import CommittedBatches from "./pages/CommittedBatches";
+import ProductLaunchRoadmap from "./pages/ProductLaunchRoadmap";
 
-// ─── Lazy: secondary pages loaded on demand ─────────────────────────
-const UploadData = lazyWithReload(() => import("./pages/UploadData"));
-const VelocityPar = lazyWithReload(() => import("./pages/VelocityPar"));
-const ProductionCalendar = lazyWithReload(() => import("./pages/ProductionCalendar"));
-const ProjectedUnits = lazyWithReload(() => import("./pages/ProjectedUnits"));
-const Categories = lazyWithReload(() => import("./pages/Categories"));
-const CommittedBatches = lazyWithReload(() => import("./pages/CommittedBatches"));
-const ProductLaunchRoadmap = lazyWithReload(() => import("./pages/ProductLaunchRoadmap"));
-
-// ─── Suspense fallback ──────────────────────────────────────────────
-function PageLoader() {
-  return (
-    <div className="flex items-center justify-center py-24">
-      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-    </div>
-  );
-}
-
-/** Wrap a page component in Suspense + PageErrorBoundary. */
+/** Keep rendering failures isolated to the active page. */
 function guarded(Page: ComponentType, pageName: string) {
   return function GuardedPage() {
     return (
       <PageErrorBoundary pageName={pageName}>
-        <Suspense fallback={<PageLoader />}>
-          <Page />
-        </Suspense>
+        <Page />
       </PageErrorBoundary>
     );
   };
