@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentType } from "react";
+import { Suspense, type ComponentType } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
@@ -8,19 +8,20 @@ import PageErrorBoundary from "./components/PageErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import DashboardLayout from "./components/DashboardLayout";
 import { Loader2 } from "lucide-react";
+import { lazyWithReload } from "./lib/lazyWithReload";
 
 // ─── Eager: Home is the landing page, always needed immediately ─────
 import Home from "./pages/Home";
 import SkuManagement from "./pages/SkuManagement";
 
 // ─── Lazy: secondary pages loaded on demand ─────────────────────────
-const UploadData = lazy(() => import("./pages/UploadData"));
-const VelocityPar = lazy(() => import("./pages/VelocityPar"));
-const ProductionCalendar = lazy(() => import("./pages/ProductionCalendar"));
-const ProjectedUnits = lazy(() => import("./pages/ProjectedUnits"));
-const Categories = lazy(() => import("./pages/Categories"));
-const CommittedBatches = lazy(() => import("./pages/CommittedBatches"));
-const ProductLaunchRoadmap = lazy(() => import("./pages/ProductLaunchRoadmap"));
+const UploadData = lazyWithReload(() => import("./pages/UploadData"));
+const VelocityPar = lazyWithReload(() => import("./pages/VelocityPar"));
+const ProductionCalendar = lazyWithReload(() => import("./pages/ProductionCalendar"));
+const ProjectedUnits = lazyWithReload(() => import("./pages/ProjectedUnits"));
+const Categories = lazyWithReload(() => import("./pages/Categories"));
+const CommittedBatches = lazyWithReload(() => import("./pages/CommittedBatches"));
+const ProductLaunchRoadmap = lazyWithReload(() => import("./pages/ProductLaunchRoadmap"));
 
 // ─── Suspense fallback ──────────────────────────────────────────────
 function PageLoader() {

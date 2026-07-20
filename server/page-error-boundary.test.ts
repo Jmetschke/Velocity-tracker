@@ -56,7 +56,7 @@ describe("PageErrorBoundary design contract", () => {
     expect(content).not.toContain("window.location.reload");
   });
 
-  it("App.tsx wraps all 7 page routes with guarded() error boundaries", async () => {
+  it("App.tsx wraps all page routes with guarded() error boundaries", async () => {
     const fs = await import("fs");
     const path = await import("path");
     const filePath = path.resolve(__dirname, "../client/src/App.tsx");
@@ -66,19 +66,23 @@ describe("PageErrorBoundary design contract", () => {
     expect(content).toContain("function guarded(");
     expect(content).toContain("PageErrorBoundary");
 
-    // Verify all 7 page routes use guarded()
+    // Verify every application page route uses guarded()
     const guardedRoutes = content.match(/guarded\(/g);
     expect(guardedRoutes).not.toBeNull();
-    expect(guardedRoutes!.length).toBeGreaterThanOrEqual(7);
+    expect(guardedRoutes!.length).toBeGreaterThanOrEqual(9);
 
     // Verify each page has a descriptive label
     expect(content).toContain('guarded(Home, "Dashboard")');
-    expect(content).toContain('guarded(SkuManagement, "SKU Management")');
+    expect(content).toContain('guarded(SkuManagement, "Production Items")');
     expect(content).toContain('guarded(UploadData, "Upload Data")');
     expect(content).toContain('guarded(VelocityPar, "Velocity & Par")');
     expect(content).toContain('guarded(ProductionCalendar, "Production Calendar")');
+    expect(content).toContain('guarded(ProjectedUnits, "Projected Units")');
     expect(content).toContain('guarded(Categories, "Categories")');
     expect(content).toContain('guarded(CommittedBatches, "Committed Batches")');
+    expect(content).toContain(
+      'guarded(ProductLaunchRoadmap, "Product Launch Roadmap")',
+    );
   });
 
   it("global ErrorBoundary still wraps the entire app as a last-resort fallback", async () => {
