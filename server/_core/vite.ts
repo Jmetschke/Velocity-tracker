@@ -60,6 +60,13 @@ export function serveStatic(app: Express) {
 
   app.use(express.static(distPath));
 
+  // Older installed PWAs may launch cached HTML that still points at a
+  // previous Vite entry hash. Redirect only legacy entry-shaped filenames to
+  // the stable entry; other missing chunks must remain real 404 responses.
+  app.get(/^\/assets\/index-[A-Za-z0-9_-]+\.js$/, (_req, res) => {
+    res.redirect(307, "/assets/app.js");
+  });
+
   // Hashed build assets must return a real 404 when they no longer exist.
   // The SPA fallback below is only valid for application routes.
   app.use("/assets", (_req, res) => {

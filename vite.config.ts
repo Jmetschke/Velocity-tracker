@@ -203,6 +203,13 @@ export default defineConfig({
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
     chunkSizeWarningLimit: 900,
+    rollupOptions: {
+      output: {
+        // Keep the entry URL stable so an installed PWA's cached HTML can
+        // always start the newest deployment.
+        entryFileNames: "assets/app.js",
+      },
+    },
   },
   server: {
     host: true,

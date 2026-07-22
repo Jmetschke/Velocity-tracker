@@ -1,7 +1,7 @@
 // PWA service worker for installability and a lightweight app-shell fallback.
 // It is intentionally online-first and does not cache /api/* or mutation traffic,
 // so Render backend calls and Turso-connected routes continue to use live data.
-const CACHE_NAME = "elevated-production-scheduler-v2";
+const CACHE_NAME = "elevated-production-scheduler-v3";
 const APP_SHELL_URLS = ["/", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", event => {

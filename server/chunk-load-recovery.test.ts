@@ -30,4 +30,18 @@ describe("lazy chunk deployment recovery", () => {
       'cached => cached ?? caches.match("/")',
     );
   });
+
+  it("uses a stable entry URL and redirects cached legacy entry URLs", () => {
+    const viteConfigSource = fs.readFileSync(
+      path.resolve(__dirname, "../vite.config.ts"),
+      "utf8",
+    );
+    const serverSource = fs.readFileSync(
+      path.resolve(__dirname, "_core/vite.ts"),
+      "utf8",
+    );
+
+    expect(viteConfigSource).toContain('entryFileNames: "assets/app.js"');
+    expect(serverSource).toContain('res.redirect(307, "/assets/app.js")');
+  });
 });
